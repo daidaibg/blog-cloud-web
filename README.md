@@ -8,9 +8,7 @@
 ## 预览地址
 https://www.gaobug.com/
 
-## 请求增加md5加密验签方式，方式参数篡改
 
-自己可以修改加密方式
 
 ## 项目使用
 
@@ -58,4 +56,8 @@ npm install -g npm-check-updates
 ncu -u
 npm install
 ```
+
+### 请求增加md5加密验签方式，方式参数篡改
+
+自己可以修改加密方式
 
