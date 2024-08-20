@@ -1,0 +1,246 @@
+@charset "UTF-8";
+@import "./element/index.scss";
+@import "./iconfont/index.css";
+@import "./font.scss";
+@import "./animation.scss";
+
+:root {
+  --header-height: 60px;
+}
+:root:not([theme-mode="dark"]) {
+  // 重置主色调 start
+  --yh-brand-color-1: #ecf2fe;
+  --yh-brand-color-2: #d4e3fc;
+  --yh-brand-color-3: #bbd3fb;
+  --yh-brand-color-4: #96bbf8;
+  --yh-brand-color-5: #699ef5;
+  --yh-brand-color-6: #4787f0;
+  --yh-brand-color-7: #266fe8;
+  --yh-brand-color: #0052d9;
+  --yh-brand-color-9: #0034b5;
+  --yh-brand-color-10: #001f97;
+
+  // 重置主色调 end
+  --border-radius: 3px;
+  --dd-color-content: #86909c;
+  --dd-font-gray-1: rgba(0, 0, 0, 0.8);
+  --dd-scrollbar-color: rgba(0, 0, 0, 0.1);
+  --dd-scroll-track-color: #fff;
+  --dd-color-secondary-brand: rgb(99, 133, 166);
+
+  --dd-component-card-background: rgba(255, 255, 255, 0.6);
+
+  --dd-html-bg: var(--yh-gray-color-1);
+  .headers-root {
+    --header-logo-shadow: rgba(255, 255, 255, 0.5) 0 5px 6px,
+      rgba(255, 255, 255, 0.2) 1px 3px 3px;
+    --header-bottom-color: #dcdfe6;
+    --yh-shoadow-bootom: 0 2px 3px rgba(0, 0, 0, 0.05);
+  }
+
+  .actionTheme {
+    --bg-color-tab-select: #fff;
+    --anim-time-fn-easing: cubic-bezier(0.38, 0, 0.24, 1);
+    --anim-duration-moderate: 0.24s;
+    --text-disabled: rgba(0, 0, 0, 0.26);
+    --bg-color-component: #eee;
+  }
+
+  .detail-root {
+    --bages-bg: var(--yh-gray-color-5);
+    --bages-color: var(--yh-font-white-1);
+  }
+
+  //容器的变量
+  .box-variable {
+    --gb-container-hover: #f9f9f9;
+  }
+}
+
+:root[theme-mode="dark"] {
+  --yh-brand-color-1: #1b2f51;
+  --yh-brand-color-2: #173463;
+  --yh-brand-color-3: #143975;
+  --yh-brand-color-4: #103d88;
+  --yh-brand-color-5: #0d429a;
+  --yh-brand-color-6: #054bbe;
+  --yh-brand-color-7: #2667d4;
+  --yh-brand-color: #4582e6;
+  --yh-brand-color-9: #699ef5;
+  --yh-brand-color-10: #96bbf8;
+
+  --dd-color-content: var(--yh-gray-color-9);
+  --dd-font-gray-1: var(--yh-font-white-2);
+
+  --dd-scrollbar-color: rgba(255, 255, 255, 0.1);
+  --dd-scroll-track-color: #333; //轨道
+  --dd-scroll-thumb-color: rgba(175, 175, 175, 0.4); //滑块
+
+  --dd-color-secondary-brand: #819ece;
+
+  --dd-component-card-background: rgba(36, 36, 36, 0.6);
+
+  --dd-html-bg: var(--yh-gray-color-14);
+  .headers-root {
+    --header-logo-shadow: rgba(0, 0, 0, 0.5) 0 5px 6px,
+      rgba(0, 0, 0, 0.2) 1px 3px 3px;
+    --header-bottom-color: #666666;
+    --yh-shoadow-bootom: var(--yh-shadow-1);
+  }
+
+  .actionTheme-root {
+    --bg-color-tab-select: #4b4b4b;
+    --anim-time-fn-easing: cubic-bezier(0.38, 0, 0.24, 1);
+    --anim-duration-moderate: 0.24s;
+    --text-disabled: rgba(255, 255, 255, 0.22);
+    --bg-color-component: #383838;
+  }
+
+  .detail-root {
+    --bages-bg: var(--yh-gray-color-11);
+    --bages-color: var(--yh-gray-color-5);
+  }
+  //容器的变量
+  .box-variable {
+    --gb-container-hover: var(--yh-gray-color-12);
+  }
+}
+
+/*滚动条整体部分,必须要设置*/
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+/*滚动条的轨道*/
+::-webkit-scrollbar-track {
+  background-color: var(--dd-scroll-track-color);
+  // background-color: transparent;
+}
+
+/*滚动条的滑块按钮*/
+::-webkit-scrollbar-thumb {
+  border-radius: 6px;
+  background-color: var(--dd-scrollbar-color);
+  transition: all 0.2s ease-in-out;
+}
+
+.el-textarea {
+  ::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+}
+html {
+  // width: 100%;
+  // height: 100%;
+  // overflow: hidden;
+  // background-color: var(--yh-bg-color-secondarycontainer);
+  // background: url("@/assets/img/feast/bg.jpg") fixed no-repeat;
+  // background-size: cover;
+  //  background-size: 50px;
+  //  background-position:  100%;
+  background-color:  var(--dd-html-bg);
+  // -webkit-transform: translateZ(0);
+}
+
+body {
+  width: 100%;
+}
+
+.dark {
+  /*滚动条的滑块按钮*/
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--dd-scroll-thumb-color);
+  }
+
+  ::-webkit-scrollbar-track {
+    // background-color: var(--yh-bg-color-secondarycontainer);
+    background-color: transparent;
+  }
+
+  // .el-textarea{
+  //   ::-webkit-scrollbar-thumb {
+  //   }
+  //   ::-webkit-scrollbar-track {
+  //     background-color: transparent;
+  //   }
+  // }
+}
+
+#app {
+  // width: 100%;
+  // height: 100%;
+  // font-family: BlinkMacSystemFont, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, Helvetica Neue, PingFang SC,
+    Microsoft YaHei, Source Han Sans SC, Noto Sans CJK SC, WenQuanYi Micro Hei,
+    sans-serif;
+}
+.light {
+  #app {
+    // background: url("../../assets/img/bg.jpeg") no-repeat;
+  }
+}
+
+// 主要容器背景
+.container-bg {
+  background: var(--yh-bg-color-container);
+}
+
+.box-shadow-0 {
+  box-shadow: var(--yh-shadow);
+}
+
+//文章管理页面  content内容
+.gaobug {
+  max-width: $max-width;
+  padding: 16px 16px 16px;
+  margin: auto;
+  min-height: calc(100vh - var(--header-height));
+  position: relative;
+}
+
+.emoji {
+  display: inline;
+  width: 20px;
+  height: 20px;
+  margin: 0 2px;
+  vertical-align: sub;
+}
+
+//手机端显示 电脑端隐藏
+.mini-screen-show{
+  display: none;
+}
+@media screen and (max-width: 768px) {
+  .mini-screen-show {
+    display: block !important;
+  }
+  .mini-screen-hide{
+    display: none !important;
+  }
+}
+
+
+@media screen and (min-width: 960px) {
+  .medium-screen-hide {
+    display: none !important;
+  }
+}
+@media screen and (max-width: 960px) {
+  $header-top: 66px;
+  :root {
+    --header-height: 50px;
+  }
+  .gaobug {
+    padding: 0;
+  }
+  //960以下要消失的元素
+  .small-screen-hide {
+    display: none;
+  }
+  .yh-button.yh-button--size-medium {
+    height: 28px;
+    line-height: 26px;
+    padding: 0 12px;
+  }
+}
