@@ -10,6 +10,10 @@ https://www.gaobug.com/
 
 
 
+## 后端地址
+
+https://gitee.com/gaobug/blog-cloud
+
 ## 项目使用
 
 ### 安装
