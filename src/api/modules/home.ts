@@ -1,4 +1,4 @@
-import { request, requestPost, requestGet } from "../api";
+import { requestPost, requestGet } from "../api";
 import { MessageParamsWithType } from "element-plus";
 
 export const Home = {

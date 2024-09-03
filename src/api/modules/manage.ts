@@ -1,13 +1,14 @@
 
 import {Home} from "./home"
-import {request} from "../api";
+import { requestPost, requestGet } from "../api";
+
 
 //我的博客列表
 export const getUserBlogList = (param:any)=>{
-    return request.get(Home.iBlogList,param)
+    return requestGet(Home.iBlogList,param)
 }
 
 //删除博客
 export const deleteBlog = (id:string)=>{
-    return request.post(Home.deleteBlog+id,{})
+    return requestPost(Home.deleteBlog+id,{})
 }

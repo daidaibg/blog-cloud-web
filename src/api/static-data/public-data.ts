@@ -1,4 +1,4 @@
-import { request, getPublic } from "../api";
+import {  getPublic } from "../api";
 
 
 

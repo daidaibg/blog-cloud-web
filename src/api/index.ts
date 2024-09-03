@@ -6,7 +6,7 @@
  * @FilePath: \web-pc-svn\src\api\modules\index.js
  */
 
-import {requestGet,requestPost,FILEPOST,request,getPublic} from "./api";
+import {requestGet,requestPost,FILEPOST,getPublic} from "./api";
 import {Home} from "./modules/home"
 import type {UrlObjType} from "./index.d"
 export * from "./modules/upload"
