@@ -89,6 +89,17 @@ export const mdEditorConfig = () => {
         screenfull: {
           instance: screenfull,
         },
+        mermaid: {
+          js: `${bootCdn}/mermaid/10.9.1/mermaid.esm.min.mjs`,
+        },
+        cropper:{
+          js: `${bootCdn}/cropperjs/1.6.2/cropper.min.js`,
+          css: `${bootCdn}/cropperjs/1.6.2/cropper.min.css`,
+        },
+        prettier: {
+          standaloneJs: `${bootCdn}/prettier/2.8.8/standalone.min.js`,
+          parserMarkdownJs: `${bootCdn}/prettier/2.8.8/parser-markdown.min.js`,
+        }
       },
     });
 
