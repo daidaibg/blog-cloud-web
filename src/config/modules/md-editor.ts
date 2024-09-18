@@ -44,7 +44,8 @@ export const mdEditorConfig = () => {
       // markedExtensions: [MarkExtension],//老的mark 扩展
 
       editorExtensions: {
-        iconfont: `${cdnBase}/iconfont/md-edit.js`,
+        // iconfont: `${cdnBase}/iconfont/md-edit.js`,
+        iconfont: `//at.alicdn.com/t/c/font_4686998_l8iumyyg8j.js`,
         highlight: {
           js: `${highlightJsBaseCdn}/highlight.min.js`,
           css: {

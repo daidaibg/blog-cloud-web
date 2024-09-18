@@ -478,7 +478,7 @@ onBeforeMount(() => {
     </div>
     <div class="json_format_nav flex flex-col">
       <div class="logo_wrap flex-shrink-0">
-        <Logo class="tools-layout_logo" target="_blank" />
+        <Logo isHideText width="20px" target="_blank" />
         <span>格式化工具</span>
       </div>
       <div class="nav_title flex-shrink-0">
@@ -698,12 +698,13 @@ onBeforeMount(() => {
 .logo_wrap {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: left;
   height: 50px;
+  padding: 0 16px;
 
   span {
     color: var(--format-color-brand);
-    margin-left: 12px;
+    margin-left: 4px;
     font-weight: 900;
   }
 }

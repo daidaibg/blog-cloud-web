@@ -21,7 +21,7 @@ const goHome = () => {
 
 <template>
   <div class="logo cursor-pointer headers-root" @click="goHome">
-    <LogoSvg />
+    <LogoSvg v-bind="$attrs"/>
   </div>
 </template>
 
