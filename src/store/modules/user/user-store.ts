@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import {currentGET} from "@/api"
+import {getUserInfo} from "@/api/user"
 import {clearLocalStorage} from "@/utils"
 import {StorageEnum} from "@/enums"
 import {ElMessage} from "element-plus"
@@ -47,7 +47,7 @@ export const useUserStore = defineStore( {
             this.modelLoginShow = false
         },
         getUserInfo(){
-            currentGET('userInfo').then((res:any)=>{
+            getUserInfo().then((res:any)=>{
                 // console.log("userData",res);
                 if(res.code==200){
                     this.isLogin=true

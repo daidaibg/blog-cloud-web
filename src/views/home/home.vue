@@ -41,7 +41,12 @@ const onLike = (item: any) => {
       likeFlag: 1,
     },
     {
-      success: (res: any) => {},
+      success: (res: any) => {
+        ElMessage.success({
+          message: res.msg,
+          plain: true,
+        });
+      },
     }
   );
 };
@@ -143,7 +148,7 @@ useInfiniteScroll(
   },
   {
     distance: 200,
-    interval:100,
+    interval: 100,
     canLoadMore: () => {
       if (route.path === RouterEnum.Home) {
         return !state.loading || !state.loadingEnd;

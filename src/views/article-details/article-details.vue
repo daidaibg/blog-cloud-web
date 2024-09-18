@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, Ref, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { currentGET } from "@/api";
+import { getNoLoginBlogDetail } from "@/api/modules/home";
 import { ElMessage } from "element-plus";
 import { HeadList } from "md-editor-v3";
 import MdView from "@/components/md-view/md-view.vue";
@@ -16,7 +16,6 @@ import { PreviewThemeType, BlogDetailsType, CodeTheme } from "./type";
 import { useMetaContent } from "@/hook";
 import { RouterEnum } from "@/enums/router-enums";
 import { windowScrollTo } from "@/utils/scroll";
-import UtilVar from "@/config/UtilVar";
 
 const themeStore = userThemeStore();
 const userStore = useUserStore();
@@ -49,7 +48,7 @@ const like = (res: any) => {
 
 //获取详情
 const getDetail = () => {
-  currentGET("indexBlogDetail", {}, route.params.id).then((res: any) => {
+  getNoLoginBlogDetail(route.params.id as string).then((res: any) => {
     // console.log("getDetail",res);
     if (res.code == 200) {
       blogDetails.value = res.data;

@@ -1,13 +1,12 @@
 <script setup lang="ts">
-
 import User from "@/components/header/user";
 import Loading from "@/components/loading";
 
 import { ref, computed, reactive, toRefs, defineAsyncComponent } from "vue";
-import { tagsList} from "./write-essay";
-import {beforeAvatarUpload,onUploadCover} from "@/utils/upload"
+import { tagsList } from "./write-essay";
+import { beforeAvatarUpload, onUploadCover } from "@/utils/upload";
 import { ElMessage, ElDialog } from "element-plus";
-import { currentPOST, currentGET } from "@/api";
+import { getBlogCategoryPage, getBlogDetail, updateBlog, addBlog } from "@/api/modules/home";
 import { useRouter, useRoute } from "vue-router";
 import { StateType, FormDataType } from "./write-essay-type";
 import { mdEditorConfig, generateId } from "@/config";
@@ -65,14 +64,14 @@ const fabu = () => {
 // 发布文章
 const publish = (formEl: FormInstance | undefined) => {
   if (!formEl) return;
-  formEl.validate((valid)=> {
+  formEl.validate((valid) => {
     if (valid) {
       saveOrUpdate(1, "发布成功").then((res) => {
         if (res) {
           router.push("/blogs/manage/article");
         }
       });
-    } 
+    }
   });
 };
 
@@ -86,7 +85,7 @@ const save = () => {
 
 //提交或则新增 处理参数并且提交调接口
 const saveOrUpdate = async (publish: Number, successMsg: string) => {
-  let type = "addBlog"; //新增
+  let requst = addBlog; //新增
   let param: any = {
     title: title.value,
     content: content.value,
@@ -95,12 +94,12 @@ const saveOrUpdate = async (publish: Number, successMsg: string) => {
   };
   if (state.id) {
     param.id = state.id;
-    type = "updataBlog"; //更新
+    requst = updateBlog; //更新
   }
   if (!param.categoryId) {
     delete param.categoryId;
   }
-  const res = await currentPOST(type, param);
+  const res = await requst(param);
   if (res.code === 200) {
     //保存草稿时需要存储id 后端暂无返回id
     if (publish === 0) {
@@ -115,7 +114,7 @@ const saveOrUpdate = async (publish: Number, successMsg: string) => {
 
 //获取分类列表
 const getCategory = () => {
-  currentGET("category", { size: 20 }).then((res: any) => {
+  getBlogCategoryPage({ size: 20 }).then((res: any) => {
     // console.log(res);
     if (res.code == 200) {
       classificatio.value = res.data.records;
@@ -171,7 +170,7 @@ const deleteCover = () => {
 
 //获取详情
 const getDetail = () => {
-  currentGET("blogDetail", {}, state.id).then((res: any) => {
+  getBlogDetail(state.id).then((res: any) => {
     console.log(res);
     if (res.code == 200) {
       blogDetails.value = res.data;
@@ -215,13 +214,7 @@ init();
       <user></user>
     </header>
     <div class="flex-1 relative content">
-      <gb-md-editor
-        v-model="content"
-        showCodeRowNumber
-        :previewTheme="previewTheme"
-        @onSave="save"
-      >
-      </gb-md-editor>
+      <gb-md-editor v-model="content" showCodeRowNumber :previewTheme="previewTheme" @onSave="save"> </gb-md-editor>
     </div>
   </div>
   <div class="dialog_wrap">
@@ -230,16 +223,14 @@ init();
       :model-value="state.dialogVisible"
       width="600px"
       :before-close="saveHandleClose"
-      class="publish_dialog"
-    >
+      class="publish_dialog">
       <el-form
         label-position="right"
         label-width="96px"
         :model="formData"
         style="max-width: 460px"
         :rules="rules"
-        ref="ruleFormRef"
-      >
+        ref="ruleFormRef">
         <el-form-item label="文章分类：" prop="categoryId">
           <el-radio-group v-model="formData.categoryId" class="cla_categoryId">
             <el-radio-button :label="item.id" v-for="item in classificatio" :key="item.id">
@@ -261,8 +252,7 @@ init();
             :before-upload="(rawFile: any) => beforeAvatarUpload(rawFile, ElMessage)"
             :on-error="onError"
             :http-request="coverUrlRequest"
-            accept="image/png,image/jpg,image/jpeg,image/gif"
-          >
+            accept="image/png,image/jpg,image/jpeg,image/gif">
             <div v-if="formData.coverUrl || formData.coverUrl !== ''" class="cover_img">
               <img :src="formData.coverUrl" class="avatar" />
               <i class="yh-icons-delete" @click.stop="deleteCover"></i>

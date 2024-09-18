@@ -1,16 +1,18 @@
 <script setup lang="ts">
-import {  currentGET } from "@/api";
-import { reactive, ref, toRefs } from "vue";
+import { getBlogCategoryPage } from "@/api/modules/home";
+import { reactive, ref } from "vue";
 import { ElMessage } from "element-plus";
-import type {ClassifyListType} from "../home-types"
+import type { ClassifyListType } from "../home-types";
 const classifyList = ref<ClassifyListType[]>([]); //分类列表
 
-
-const props = withDefaults(defineProps<{
-  classifyListActive:string|number
-}>(), {
-  classifyListActive:"",
-});
+const props = withDefaults(
+  defineProps<{
+    classifyListActive: string | number;
+  }>(),
+  {
+    classifyListActive: "",
+  }
+);
 const emits = defineEmits<{
   (event: "on-classify", item: ClassifyListType): void;
 }>();
@@ -20,22 +22,19 @@ const onClassify = (item: any) => {
 
 //获取分类列表
 const getCategory = () => {
-  currentGET("category", { size: 20 }).then((res:any) => {
+  getBlogCategoryPage({ size: 20 }).then((res: any) => {
     // console.log("分类", res);
     if (res.code == 200) {
-      classifyList.value = [
-        { id: "", categoryName: "全部" },
-        ...res.data.records,
-      ];
+      classifyList.value = [{ id: "", categoryName: "全部" }, ...res.data.records];
     } else {
       ElMessage.error(res.msg);
     }
   });
 };
-const init=()=>{
+const init = () => {
   getCategory();
-}
-init()
+};
+init();
 </script>
 
 <template>
@@ -46,8 +45,7 @@ init()
         :key="item.id"
         class="classify-item cursor-pointer"
         :class="{ 'is-active': classifyListActive == item.id }"
-        @click="onClassify(item)"
-      >
+        @click="onClassify(item)">
         {{ item.categoryName }}
       </li>
     </ul>
@@ -62,7 +60,6 @@ init()
   position: fixed;
   top: var(--header-height);
   z-index: 1;
-
 }
 .light .mod-classify {
   backdrop-filter: blur(8px) !important;

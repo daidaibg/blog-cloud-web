@@ -1,10 +1,3 @@
-<!--
- * @Author: daidai
- * @Date: 2021-12-13 14:58:20
- * @LastEditors: Please set LastEditors
- * @LastEditTime: 2023-01-04 15:14:29
- * @FilePath: \web-pc\src\views\Login\Retrieve.vue
--->
 <template>
   <div class="retrieve">
     <div class="flex-center flex justify-center items-center flex-col">
@@ -55,7 +48,7 @@
 </template>
 
 <script lang="ts" setup>
-import { currentPOST ,currentGET} from "@/api";
+import {getCaptchaEmail,registerEmail} from "@/api/modules/home"
 import { reactive, ref } from "vue"
 import { ElMessage, ElStep, ElSteps, ElForm, ElFormItem, ElInput } from "element-plus"
 import { useRouter } from "vue-router"
@@ -116,7 +109,7 @@ function save(formEl: any) {
   formEl.validate((valid: boolean) => {
     if (valid) {
       state.loading = true;
-      currentPOST("registerEmail", {
+      registerEmail( {
         email: state.loginForm.email,
         password: state.loginForm.pass,
         code: state.loginForm.captcha,
@@ -141,7 +134,7 @@ async function GetCode() {
   if (state.getCode) return;
   state.getCode = true;
   state.countdown = "发送中...";
-  await currentGET("captchaEmail",{
+  await getCaptchaEmail({
     email: state.loginForm.email,
   }).then((res:any) => {
     if (res.code===200) {
