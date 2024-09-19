@@ -54,10 +54,10 @@ const sendChart = () => {
       });
       localstorge();
     } else if (res.code == 401) {
-      ElMessage.error(res.msg);
+      ElMessage.error({message:res.msg,plain:true});
       chatKeyInitFlag.value = false;
     } else {
-      ElMessage.error(res.msg);
+      ElMessage.error({message:res.msg,plain:true});
     }
   });
   chatInput.value = "";

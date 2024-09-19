@@ -1,5 +1,5 @@
 import { requestPost, requestGet } from "../api";
-import type { MessageParamsWithType } from "element-plus";
+import type { MessageOptions } from "element-plus";
 
 export const Home = {
   blogList: "/index/blog/list", //首页博客列表
@@ -35,7 +35,7 @@ export interface GetBlogListType {
 export const getBlog = (param: GetBlogListType) => {
   return requestGet<
     GetBlogListType,
-    { code: number; data: { records: any; totalPage: number }; msg: MessageParamsWithType }
+    { code: number; data: { records: any; totalPage: number }; msg: MessageOptions['message'] }
   >(Home.blogList, param);
 };
 

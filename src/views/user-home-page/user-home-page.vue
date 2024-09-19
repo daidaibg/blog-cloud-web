@@ -36,7 +36,7 @@ const getBlog = () => {
     if (res.code == 200) {
       blogData.list = res.data.records;
       blogData.total = res.data.total;
-    } else ElMessage.error(res.msg);
+    } else ElMessage.error({message:res.msg,plain:true});
   });
 };
 

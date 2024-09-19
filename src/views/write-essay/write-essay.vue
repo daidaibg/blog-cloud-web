@@ -52,10 +52,10 @@ const rules = reactive<FormRules>({
 // 发布
 const fabu = () => {
   if (title.value == "") {
-    ElMessage.warning("请输入标题!");
+    ElMessage.warning({message:"请输入标题!",plain:true});
     return;
   } else if (content.value.length < 10) {
-    ElMessage.warning("文章内容太短！");
+    ElMessage.warning({message:"文章内容太短！",plain:true});
     return;
   }
   dialogVisible.value = true;
@@ -104,10 +104,10 @@ const saveOrUpdate = async (publish: Number, successMsg: string) => {
     //保存草稿时需要存储id 后端暂无返回id
     if (publish === 0) {
     }
-    ElMessage.success(successMsg);
+    ElMessage.success({message:successMsg,plain:true});
     return true;
   } else {
-    ElMessage.error({ message: res.msg });
+    ElMessage.error({ message: res.msg ,plain:true});
     return false;
   }
 };
@@ -119,7 +119,7 @@ const getCategory = () => {
     if (res.code == 200) {
       classificatio.value = res.data.records;
     } else {
-      ElMessage.error(res.msg);
+      ElMessage.error({message:res.msg,plain:true});
     }
   });
 };
@@ -149,9 +149,9 @@ const goback = () => {
 // 上传失败
 const onError = (error: Error | any) => {
   if (error.msg) {
-    ElMessage.error(error.msg);
+    ElMessage.error({message:error.msg,plain:true});
   } else {
-    ElMessage.error("未知异常，图片上传失败");
+    ElMessage.error({message:"未知异常，图片上传失败",plain:true});
   }
 };
 
@@ -184,7 +184,7 @@ const getDetail = () => {
       formData.coverUrl = res.data.coverUrl;
       // console.log(state);
     } else {
-      ElMessage.error(res.msg);
+      ElMessage.error({message:res.msg,plain:true});
     }
   });
 };

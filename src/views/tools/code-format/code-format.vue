@@ -79,7 +79,7 @@ const onCommonClick = (commonItem: any) => {
 const navActiveChange = (fileNavItem: any): any => {
   const currentFileData = seachTreeData(catalogueList.value, fileNavItem.id);
   if (!currentFileData) {
-    ElMessage.error("此文件已被删除,已自动删除！");
+    ElMessage.error({message:"此文件已被删除,已自动删除！",plain:true});
     onRemoveNav(fileNavItem);
     return;
   }
@@ -194,7 +194,7 @@ const downFile = () => {
     })
     .catch((err) => {
       console.error(err);
-      ElMessage.error("保存失败！" + err);
+      ElMessage.error({message:"保存失败！" + err,plain:true});
     });
 };
 //删除

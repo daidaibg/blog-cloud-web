@@ -86,7 +86,7 @@ const switchTableData = () => {
 };
 const uploadChange = async (file: any) => {
   if (!/\.(xls|xlsx)$/.test(file.name.toLowerCase())) {
-    ElMessage.warning("上传格式不正确，请上传xls或者xlsx格式");
+    ElMessage.warning({message:"上传格式不正确，请上传xls或者xlsx格式",plain:true});
     return false;
   }
   console.log("file", file);

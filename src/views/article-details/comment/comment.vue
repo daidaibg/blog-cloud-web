@@ -65,7 +65,7 @@ const addCommentHandle = (CommentVal: string): CommentListType => {
  */
 const onComment = (CommentVal: string, item?: CommentListType) => {
   if (!userStore.isLogin) {
-    ElMessage.warning("暂未登录，请登录后再进行评论！");
+    ElMessage.warning({message:"暂未登录，请登录后再进行评论！",plain:true});
     return;
   }
   comment({
@@ -78,13 +78,13 @@ const onComment = (CommentVal: string, item?: CommentListType) => {
       if (res.code == ReqCodeEnum.Success) {
         const newConmmenData = addCommentHandle(CommentVal);
         commentList.value.push(newConmmenData);
-        ElMessage.success("评论成功!");
+        ElMessage.success({message:"评论成功!",plain:true});
       } else {
-        ElMessage.error(res.msg);
+        ElMessage.error({message:res.msg,plain:true});
       }
     })
     .catch((err) => {
-      ElMessage.error(err);
+      ElMessage.error({message:err,plain:true});
     });
 };
 
@@ -104,13 +104,13 @@ const delComment = (item: CommentListType, i: number) => {
           // console.log("commentDel", res);
           if (res.code == ReqCodeEnum.Success) {
             commentList.value.splice(i, 1);
-            ElMessage.success("删除成功!");
+            ElMessage.success({message:"删除成功!",plain:true});
           } else {
-            ElMessage.error(res.msg);
+            ElMessage.error({message:res.msg,plain:true});
           }
         })
         .catch((err) => {
-          ElMessage.error(err);
+          ElMessage.error({message:err,plain:true});
         });
     })
     .catch((err) => {
@@ -146,11 +146,11 @@ const getData = (isLoadAll?: boolean) => {
           pagingData.total = res.data.total;
         }
       } else {
-        ElMessage.error(res.msg);
+        ElMessage.error({message:res.msg,plain:true});
       }
     })
     .catch((err) => {
-      ElMessage.error(err);
+      ElMessage.error({message:err,plain:true});
     });
 };
 getData();

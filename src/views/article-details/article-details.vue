@@ -57,7 +57,7 @@ const getDetail = () => {
       setMetaTagContent("description", res.data.summary == "" ? res.data.title : res.data.summary);
       setMetaTagContent("keywords", res.data.title);
     } else {
-      ElMessage.error(res.msg);
+      ElMessage.error({message:res.msg,plain:true});
     }
   });
 };

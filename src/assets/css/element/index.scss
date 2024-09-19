@@ -1,7 +1,7 @@
 /*
  * @Author: wei
  * @description: 修改element主题和变量
- * @LastEditTime: 2022-12-12 10:20:36
+ * @LastEditTime: 2024-09-19 18:19:19
  */
 // https://github.dev/element-plus/unplugin-element-plus
 
@@ -57,33 +57,6 @@ html .el-popover.el-popper {
 }
 //.el-message
 html .el-message {
-  background-color: var(--yh-bg-color-container);
-  box-shadow: var(--yh-shadow-3), var(--yh-shadow-inset-top),
-    var(--yh-shadow-inset-right), var(--yh-shadow-inset-bottom),
-    var(--yh-shadow-inset-left);
-  border: none;
-  color: var(--yh-text-color-primary);
-
-  .el-message__icon {
-    font-size: 20px;
-  }
-
-  &.el-message--info .el-message__icon {
-    color: var(--yh-brand-color);
-  }
-
-  &.el-message--success .el-message__icon {
-    color: var(--yh-success-color);
-  }
-
-  &.el-message--warning .el-message__icon {
-    color: var(--yh-warning-color);
-  }
-
-  &.el-message--error .el-message__icon {
-    color: var(--yh-error-color);
-  }
-
   .el-message__content {
     color: var(--yh-text-color-primary);
   }

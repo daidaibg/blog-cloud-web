@@ -27,7 +27,7 @@ const getCategory = () => {
     if (res.code == 200) {
       classifyList.value = [{ id: "", categoryName: "全部" }, ...res.data.records];
     } else {
-      ElMessage.error(res.msg);
+      ElMessage.error({message:res.msg,plain:true});
     }
   });
 };

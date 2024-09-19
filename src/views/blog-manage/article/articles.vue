@@ -36,7 +36,7 @@ const getBlog = () => {
     if (res.code == 200) {
       blogData.list = res.data.records;
       blogData.total = res.data.total;
-    } else ElMessage.error(res.msg);
+    } else ElMessage.error({message:res.msg,plain:true});
   });
 };
 const currentChange = (current: number) => {
@@ -69,12 +69,12 @@ const command = (commandName: string | undefined, item: any) => {
   })
     .then(() => {
       deleteBlog(item.id).then(
-        (res: { code: number; msg: MessageParamsWithType }) => {
+        (res) => {
           if (res.code === 200) {
             getBlog();
-            ElMessage.success("删除成功");
+            ElMessage.success({message:"删除成功",plain:true});
           } else {
-            ElMessage.error(res.msg);
+            ElMessage.error({message:res.msg,plain:true});
           }
         }
       );

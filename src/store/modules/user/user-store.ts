@@ -53,12 +53,12 @@ export const useUserStore = defineStore( {
                     this.isLogin=true
                     this.userData=res.data
                 }else if(res.code ==204){  //请求成功但没内容
-                    // ElMessage.error(res.msg)
+                   
                 }else{
-                    ElMessage.error(res.msg)
+                    ElMessage.error({message:res.msg,plain:true})
                 }
             }).catch(err=>{
-                ElMessage.error(err.msg)
+                ElMessage.error({message:err.msg,plain:true})
             })
         }
     },

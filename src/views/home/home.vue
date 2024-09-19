@@ -115,7 +115,7 @@ const getBlogList = () => {
       }
     } else {
       state.loading = false;
-      ElMessage.error(res.msg);
+      ElMessage.error({message:res.msg,plain:true});
     }
   });
 };

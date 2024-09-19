@@ -47,11 +47,11 @@ export const handleReqBody = (res: any, option: BlogLikeActionType): any => {
   if (res.code === 200) {
     option.success && option.success(res);
   } else if (res.code === ReqCodeEnum.Unauthorized) {
-    ElMessage.info("请先登录!");
+    ElMessage.info({message:"请先登录!",plain:true});
     showLoginDislog();
     option.Unauthorized && option.Unauthorized(res);
   } else {
-    ElMessage.error(res.msg);
+    ElMessage.error({message:res.msg,plain:true});
     option.error && option.error(res);
   }
 };

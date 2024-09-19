@@ -10,10 +10,10 @@ export const onUploadCover = async (option:any) => {
   export const beforeAvatarUpload = (rawFile: any, ElMessage: any) => {
     console.log(rawFile);
     if ( !['image/jpeg', 'image/png','image/gif' ].includes(rawFile.type) ) {
-      ElMessage.warning("格式必须为JPG,PNG或GIF!")
+      ElMessage.warning({message:"格式必须为JPG,PNG或GIF!",plain:true})
       return false
     } else if (rawFile.size / 1024 / 1024 > 10) {
-      ElMessage.warning("图片大小不能超过10M!")
+      ElMessage.warning({message:"图片大小不能超过10M!",plain:true})
       return false
     }
     return true

@@ -7,9 +7,9 @@ const imgValue = ref()
 // 上传失败
 const onError = (error: Error|any)=>{
     if(error.msg){
-        ElMessage.error(error.msg)
+        ElMessage.error({message:error.msg,plain:true})
     }else{
-        ElMessage.error('未知异常，图片上传失败')
+        ElMessage.error({message:'未知异常，图片上传失败',plain:true})
     }
 }
 // 上传成功
