@@ -22,7 +22,9 @@ export default defineConfig(({ mode }) => {
       resolvers: [ElementPlusResolver()],
     }),
     Components({
-      resolvers: [ElementPlusResolver()]
+      resolvers: [ElementPlusResolver({
+        // importStyle: "sass",
+      })]
     }),
     ],
     publicDir: "public",
