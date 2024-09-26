@@ -28,6 +28,13 @@ const toolList = [
         url: RouterEnum.ReadXlsx,
       },
       {
+        title: "HTML预览",
+        id: "14",
+        type: "inner",
+        img: wrapUrl+"/blog-cloud-tool/img/tools/html.png",
+        url: RouterEnum.HtmlPreview,
+      },
+      {
         title: "节日倒计时",
         id: "13",
         type: "inner",

@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => {
     }),
     Components({
       resolvers: [ElementPlusResolver({
-        // importStyle: "sass",
+        importStyle: "sass",
       })]
     }),
     ],

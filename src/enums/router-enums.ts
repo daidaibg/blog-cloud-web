@@ -26,4 +26,6 @@ export enum RouterEnum {
     Chicken="/chicken",
     //chatGpt
     Chat="/chat",
+    /**html预览 */
+    HtmlPreview="/html/preview",
 }
