@@ -1,6 +1,7 @@
 import screenfull from "screenfull";
 import { config } from "md-editor-v3";
 import TargetBlankExtension from "./target-blank-extension";
+import mermaid from 'mermaid';
 //新的
 //@ts-ignore
 import MarkExtension from "markdown-it-mark";
@@ -91,7 +92,9 @@ export const mdEditorConfig = () => {
           instance: screenfull,
         },
         mermaid: {
-          js: `${bootCdn}/mermaid/10.9.1/mermaid.esm.min.mjs`,
+          // js: `${bootCdn}/mermaid/10.9.1/mermaid.esm.min.mjs`,
+          // js: `${bootCdn}/mermaid/10.9.1/mermaid.min.js`,
+          instance: mermaid
         },
         cropper:{
           js: `${bootCdn}/cropperjs/1.6.2/cropper.min.js`,

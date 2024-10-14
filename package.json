@@ -26,6 +26,7 @@
     "file-saver": "^2.0.5",
     "marked": "^14.1.2",
     "md-editor-v3": "^4.21.0",
+    "mermaid": "^11.3.0",
     "monaco-editor": "^0.52.0",
     "pinia": "^2.2.4",
     "screenfull": "^6.0.2",
