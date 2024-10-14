@@ -66,7 +66,8 @@ export default defineConfig(({ mode }) => {
         scss: {
           // charset: false,
           // additionalData: '@import "./src/assets/css/variable.scss";',
-          additionalData: `@use "./src/assets/css/variable.scss" as *;`,
+          additionalData: `@use "@/assets/css/variable.scss" as *;`,
+          api: 'modern-compiler', //or modern
         },
       },
     },
