@@ -68,6 +68,7 @@ export default defineConfig(({ mode }) => {
           // additionalData: '@import "./src/assets/css/variable.scss";',
           additionalData: `@use "@/assets/css/variable.scss" as *;`,
           api: 'modern-compiler', //or modern
+          importers:[]
         },
       },
     },
