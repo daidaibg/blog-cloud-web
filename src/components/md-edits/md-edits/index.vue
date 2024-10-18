@@ -54,13 +54,11 @@ init();
 </template>
 
 <style scoped lang="scss">
-
-
-@import "@/assets/css/edit-md/edit-md.scss";
+@use "@/assets/css/edit-md/edit-md.scss" as edit;
 .editor_wrap {
   width: 100%;
   height: 100%;
-  @include editmdVar("write");
+  @include edit.editmdVar("write");
 }
 
 </style>

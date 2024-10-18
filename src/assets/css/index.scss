@@ -1,8 +1,9 @@
 @charset "UTF-8";
-@import "./element/index.scss";
+@use "sass:meta";
+@use "element/index.scss";
 @import "./iconfont/index.css";
-@import "./font.scss";
-@import "./animation.scss";
+@include meta.load-css("font.scss");
+@include meta.load-css("animation.scss");
 
 :root {
   --header-height: 60px;

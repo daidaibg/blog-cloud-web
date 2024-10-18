@@ -197,7 +197,7 @@ const goEditArticle = () => {
 </template>
 
 <style scoped lang="scss">
-@import "@/assets/css/edit-md/edit-md.scss";
+@use "@/assets/css/edit-md/edit-md.scss" as edit;
 .details {
   position: relative;
 
@@ -363,7 +363,7 @@ const goEditArticle = () => {
     }
   }
 
-  @include editmdVar;
+  @include edit.editmdVar;
 }
 
 @media screen and (min-width: 960px) and (max-width: 1320px) {
