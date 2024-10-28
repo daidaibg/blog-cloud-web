@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",
-    "@types/node": "^22.7.8",
+    "@types/node": "^22.8.1",
     "@types/webpack-env": "^1.18.5",
     "@vueuse/core": "^11.1.0",
     "axios": "^1.7.7",
@@ -32,14 +32,14 @@
     "screenfull": "^6.0.2",
     "unplugin-auto-import": "^0.18.3",
     "unplugin-vue-define-options": "^1.5.2",
-    "vite": "^5.4.9",
+    "vite": "^5.4.10",
     "vue": "^3.5.12",
     "vue-i18n": "^10.0.4",
     "vue-router": "^4.4.5",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@types/color": "^3.0.6",
+    "@types/color": "^4.2.0",
     "@types/crypto-js": "^4.2.2",
     "@types/file-saver": "^2.0.7",
     "@types/js-md5": "^0.7.2",
@@ -48,13 +48,13 @@
     "highlight.js": "^11.10.0",
     "markdown-it-mark": "^4.0.0",
     "postcss": "^8.4.47",
-    "sass": "^1.80.3",
+    "sass": "^1.80.4",
     "tailwindcss": "^3.4.14",
     "typescript": "^5.6.3",
     "unplugin-element-plus": "^0.8.0",
     "unplugin-vue-components": "^0.27.4",
     "vite-plugin-vue-setup-extend": "^0.4.0",
-    "vue-tsc": "^2.1.6",
+    "vue-tsc": "^2.1.8",
     "yhht-plus": "^0.2.3"
   }
 }
