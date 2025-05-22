@@ -16,8 +16,7 @@ if (themeState && themeState.theme == ThemeEnum.DARK) {
     domSetAttribute(themeState.theme)
 }
 
-export const userThemeStore = defineStore({
-    id: "userThemeStore",
+export const userThemeStore = defineStore("userThemeStore",{
     state: ():ThemeStateType =>  ({ theme: themeState?.theme || theme }),
     getters: {
         getTheme():ThemeEnum {

@@ -6,8 +6,7 @@ import {ElMessage} from "element-plus"
 import {userStoreType,userDataType} from "./user-store-type"
 export * from "./user-store-type"
 
-export const useUserStore = defineStore( {
-    id: "useUserStore",
+export const useUserStore = defineStore("useUserStore", {
     state:():userStoreType=> ({
         isLogin: false,//是否登录
         modelLoginShow: false,

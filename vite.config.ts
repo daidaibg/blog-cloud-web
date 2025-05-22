@@ -1,40 +1,43 @@
-import { defineConfig, loadEnv } from 'vite'
-import vue from '@vitejs/plugin-vue'
+import { defineConfig, loadEnv } from "vite";
+import vue from "@vitejs/plugin-vue";
 import { resolve } from "path";
 //@ts-ignore
-import ElementPlus from 'unplugin-element-plus/vite'
-import AutoImport from 'unplugin-auto-import/vite'
-import Components from 'unplugin-vue-components/vite'
-import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
-
+import ElementPlus from "unplugin-element-plus/vite";
+import AutoImport from "unplugin-auto-import/vite";
+import Components from "unplugin-vue-components/vite";
+import { ElementPlusResolver } from "unplugin-vue-components/resolvers";
+import tailwindcss from "@tailwindcss/vite";
 // console.log(process.env);
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-
-  const env = loadEnv(mode, process.cwd())
+  const env = loadEnv(mode, process.cwd());
   // console.log(command, mode);
   // console.log(opt);
   // console.log(env);
   return {
-    plugins: [vue(),
-    ElementPlus(),
-    AutoImport({
-      resolvers: [ElementPlusResolver()],
-    }),
-    Components({
-      resolvers: [ElementPlusResolver({
-        importStyle: "sass",
-      })]
-    }),
+    plugins: [
+      vue(),
+      tailwindcss(),
+      ElementPlus(),
+      AutoImport({
+        resolvers: [ElementPlusResolver()],
+      }),
+      Components({
+        resolvers: [
+          ElementPlusResolver({
+            importStyle: "sass",
+          }),
+        ],
+      }),
     ],
     publicDir: "public",
     base: env.VITE_PREFIX,
     server: {
-      host: '0.0.0.0',
+      host: "0.0.0.0",
       port: 8118,
       open: false,
       strictPort: false,
-      // proxy: { // 代理 
+      // proxy: { // 代理
       // 字符串简写写法
       // '/foo': 'http://localhost:4567/foo',
       // 选项写法
@@ -55,8 +58,8 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         "@": resolve(__dirname, "./src"),
-        "components": resolve(__dirname, "./src/components"),
-        "api": resolve(__dirname, "./src/api"),
+        components: resolve(__dirname, "./src/components"),
+        api: resolve(__dirname, "./src/api"),
         // 'vue-i18n': 'vue-i18n/dist/vue-i18n.cjs.js'
       },
     },
@@ -67,8 +70,8 @@ export default defineConfig(({ mode }) => {
           // charset: false,
           // additionalData: '@import "./src/assets/css/variable.scss";',
           additionalData: `@use "@/assets/css/variable.scss" as *;`,
-          api: 'modern-compiler', //or modern
-          importers:[]
+          api: "modern-compiler", //or modern
+          importers: [],
         },
       },
     },
@@ -82,15 +85,13 @@ export default defineConfig(({ mode }) => {
       ],
     },
     build: {
-      outDir: 'dist',
+      outDir: "dist",
       chunkSizeWarningLimit: 500,
       rollupOptions: {
         external: [
           // 'highlight.js'
         ],
-        plugins: [
-        
-        ],
+        plugins: [],
         output: {
           // globals: {
           //   'highlight.js': 'hljs',  //暂不支持 使用上边plugins.externalGlobals方式
@@ -109,16 +110,13 @@ export default defineConfig(({ mode }) => {
           //     return id.toString().split('node_modules/')[1].split('/')[0].toString();
           //   }
           // }
-        }
-      }
+        },
+      },
       // lib: {
       //   entry: 'packages/index.js',
       //   formats: ['es'],
       //   fileName: (format) => `index.${format}.js`
       // },
     },
-
-
-  }
-
-})
+  };
+});

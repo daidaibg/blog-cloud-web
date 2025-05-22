@@ -4,8 +4,7 @@ import { StorageEnum, LangStateType, LangEnum } from '@/enums'
 import i18n from '@/i18n/index'
 const { YH_LANG_STORE } = StorageEnum
 const storageLang: LangStateType = getLocalStorage(YH_LANG_STORE)
-export const useLangStore = defineStore({
-    id: "useLangStore",
+export const useLangStore = defineStore("useLangStore",{
     state: ():LangStateType => storageLang||{
         lang: i18n.global.locale
     },
