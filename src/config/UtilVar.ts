@@ -11,7 +11,8 @@ const UtilVar: UtilVarType = {
     baseUrl:import.meta.env.VITE_API_URL,
     code: 401, //登陆过期
     ENC_key:import.meta.env.VITE_API_ENC_KEY,
-    resourceUrl: "https://www.daidaibg.com",
+    // resourceUrl: "https://www.daidaibg.com",
+    resourceUrl: "https://www.gaobug.com",
     get assetsBaseUrl(): string {
         return this.resourceUrl
     }

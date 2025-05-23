@@ -130,7 +130,7 @@ const goEditArticle = () => {
           <p class="summy break-all">{{ blogDetails.summary }}</p>
         </div>
         <md-view
-          editor-id="edit2preview"
+          id="edit2preview"
           showCodeRowNumber
           class="mt-8"
           :text="mdText"

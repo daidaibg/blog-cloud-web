@@ -26,7 +26,7 @@ mdEditorConfig();
 
 <template>
   <MdPreview
-    :editorId="id"
+    :id="id"
     :modelValue="props.text"
     v-bind="$attrs"
     :mdHeadingId="generateId"

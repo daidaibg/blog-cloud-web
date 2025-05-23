@@ -35,7 +35,7 @@ export const mdEditorConfig = () => {
   // console.log("mdEditorConfigFlag", mdEditorConfigFlag);
   try {
     config({
-      iconfontType: "svg",
+      // iconfontType: "svg",
 
       markdownItConfig(md: any) {
         md.use(MarkExtension); //新的mark 扩展
@@ -45,8 +45,6 @@ export const mdEditorConfig = () => {
       // markedExtensions: [MarkExtension],//老的mark 扩展
 
       editorExtensions: {
-        // iconfont: `${cdnBase}/iconfont/md-edit.js`,
-        iconfont: `//at.alicdn.com/t/c/font_4686998_l8iumyyg8j.js`,
         highlight: {
           js: `${highlightJsBaseCdn}/highlight.min.js`,
           css: {

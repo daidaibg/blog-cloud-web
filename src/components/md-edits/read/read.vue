@@ -14,14 +14,14 @@
       <MdPreview
         :theme="theme"
         :preview-theme="props.previewTheme"
-        editor-id="edit2preview"
+        id="edit2preview"
         :modelValue="state.mdText"
         :mdHeadingId="generateId" />
     </div>
     <template #trigger>
-      <svg class="md-editor-icon" aria-hidden="true">
-        <use xlink:href="#md-editor-icon-read"></use>
-      </svg>
+      <div class="md-editor-icon">
+        <ReadIcon width="24"></ReadIcon>
+      </div>
     </template>
   </ModalToolbar>
 </template>
@@ -32,6 +32,7 @@ import { MdPreview, ModalToolbar } from "md-editor-v3";
 import { mdGrammar } from "@/api/blog/blog";
 import { ElMessage } from "element-plus";
 import { generateId } from "@/config/modules/md-editor";
+import { ReadIcon } from "@/components/icons/index";
 
 export interface ColumnProps {
   theme: any;

@@ -16,7 +16,6 @@ import type { ExposeParam, InsertContentGenerator } from "md-editor-v3";
 const themeStore = userThemeStore();
 
 const editorId = "editor-preview";
-// const editorId = "md-editor-v3";
 const editorRef = ref<ExposeParam>();
 
 const props = defineProps({
@@ -39,11 +38,11 @@ init();
 
 <template>
   <md-editor :toolbars="toolbars" class="editor_wrap" showCodeRowNumber :previewTheme="props.previewTheme" :auto-detect-code="true"
-    :theme="themeStore.getTheme" ref="editorRef" :editor-id="editorId" @uploadImg="onUploadImg" :mdHeadingId="generateId"
+    :theme="themeStore.getTheme" ref="editorRef" :id="editorId" @uploadImg="onUploadImg" :mdHeadingId="generateId"
     v-bind="$attrs">
     <template #defToolbars>
-      <!-- <MarkExtension :editor-id="editorId" @on-change="onChangeMark" />
-            <MdEmoji :editor-id="editorId" @onChange="onEmojiChange" /> -->
+      <!-- <MarkExtension :id="editorId" @on-change="onChangeMark" />
+            <MdEmoji :id="editorId" @onChange="onEmojiChange" /> -->
       <MarkExtension :onInsert="insert" />
       <MdEmoji :onInsert="insert" />
       <ReadExtension :previewTheme="props.previewTheme" :theme="themeStore.getTheme" />

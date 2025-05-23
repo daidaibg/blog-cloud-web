@@ -1,4 +1,4 @@
-import { marked } from 'marked';
+import { marked ,TokenizerExtension,RendererExtension} from 'marked';
 
 export default {
   name: 'MarkExtension',
@@ -22,4 +22,4 @@ export default {
   renderer(token: any) {
     return `<mark>${token.text}</mark>`;
   }
-} as marked.TokenizerExtension & marked.RendererExtension;
+} as TokenizerExtension & RendererExtension;

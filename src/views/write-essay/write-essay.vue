@@ -275,5 +275,5 @@ init();
 </template>
 
 <style scoped lang="scss">
-@import "./write-essay.scss";
+@use "./write-essay.scss";
 </style>

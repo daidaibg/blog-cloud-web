@@ -1,9 +1,8 @@
 <script lang="ts" setup>
 import { reactive } from "vue";
 import { emojis } from "./md-emoji";
-import MdEditor from "md-editor-v3";
+import {MdEditor,DropdownToolbar} from "md-editor-v3";
 
-const { DropdownToolbar } = MdEditor;
 const props = defineProps({
   editorId: String,
 });

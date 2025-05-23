@@ -1,17 +1,18 @@
 <template>
   <NormalToolbar title="mark" @onClick="markHandler">
     <template #trigger>
-      <svg class="md-editor-icon" aria-hidden="true">
-        <use xlink:href="#md-editor-icon-mark"></use>
-      </svg>
+      <div class="md-editor-icon">
+        <MarkIcon width="24"></MarkIcon>
+      </div>
     </template>
   </NormalToolbar>
 </template>
 
 <script setup lang="ts">
-import {NormalToolbar} from "md-editor-v3";
+import { NormalToolbar } from "md-editor-v3";
 import type { PropType } from "vue";
 import type { InsertContentGenerator } from "md-editor-v3";
+import { MarkIcon } from "@/components/icons/index";
 
 const props = defineProps({
   onInsert: {
