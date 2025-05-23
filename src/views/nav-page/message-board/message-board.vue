@@ -69,7 +69,7 @@ const onComment = (CommentVal: string) => {
       </div>
       <div class="comment_item flex" v-for="(item, i) in commentList" :key="i">
         <el-image
-          :src="UtilVar.assetsBaseUrl+'/imgs/avatar/avatar.png'"
+          :src="UtilVar.assetsBaseUrl+'/static/imgs/avatar/avatar.png'"
           lazy
           class="comment_avatar"
           fit="cover"

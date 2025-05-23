@@ -178,7 +178,7 @@ getData();
         :src="
           item.userAvatar
             ? item.userAvatar
-            :UtilVar.assetsBaseUrl+ '/imgs/avatar/avatar.png'
+            :UtilVar.assetsBaseUrl+ '/static/imgs/avatar/avatar.png'
         "
         lazy
         class="comment_avatar"

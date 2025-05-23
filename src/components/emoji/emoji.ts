@@ -570,7 +570,7 @@ let emojiList: EmojiListType[] = [
 
 export const emojiObj: EmojiObjType = {};
 emojiList= emojiList.map((item) => {
-  const path = UtilVar.assetsBaseUrl + "/blog-static"+item.path;
+  const path = UtilVar.assetsBaseUrl + "/static"+item.path;
   emojiObj["[" + item.name + "]"] = path;
   return {
     ...item,
