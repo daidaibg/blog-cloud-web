@@ -38,5 +38,5 @@ const onSelectTheme = () => {
 </template>
 
 <style scoped lang="scss">
-@import "../style/left-action.scss";
+@use "../style/left-action.scss";
 </style>

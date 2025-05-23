@@ -36,7 +36,7 @@ const downFile = () => {
 </template>
 
 <style scoped lang="scss">
-@import "../style/left-action.scss";
+@use "../style/left-action.scss";
 .menubar-menu-button {
     color: rgba(255, 255, 255, 0.4);
     text-align: center;

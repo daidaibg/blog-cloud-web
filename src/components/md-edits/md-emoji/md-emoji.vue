@@ -12,7 +12,7 @@
           <use xlink:href="#md-editor-icon-emoji"></use>
         </svg> -->
       <div class="md-editor-icon" >
-        <Emoji width="24"></Emoji>
+        <EmojiIcon width="24"></EmojiIcon>
       </div>
     </template>
   </DropdownToolbar>
@@ -24,7 +24,7 @@ import { DropdownToolbar } from "md-editor-v3";
 import type { PropType } from "vue";
 import type { InsertContentGenerator } from "md-editor-v3";
 import { emojis } from "./md-emoji";
-import { Emoji } from "@/components/icons/index";
+import { EmojiIcon } from "@/components/icons/index";
 
 const props = defineProps({
   onInsert: {

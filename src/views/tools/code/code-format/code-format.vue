@@ -563,9 +563,9 @@ onBeforeMount(() => {
 }
 </style>
 <style scoped lang="scss">
-@import "./style/code-format-var.scss";
-@import "./style/code-format-dark.scss";
-@import "./style/left-action.scss";
+@use "./style/code-format-var.scss";
+@use "./style/code-format-dark.scss";
+@use "./style/left-action.scss";
 .json_format {
   width: 100%;
   height: 100vh;

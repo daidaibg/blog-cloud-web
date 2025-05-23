@@ -177,7 +177,7 @@ getBlog();
 </template>
 
 <style scoped lang="scss">
-@import "./public.scss";
+@use "./public.scss";
 
 $box-m-b: 88px;
 $mr-b-768: 200px;
