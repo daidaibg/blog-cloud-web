@@ -26,4 +26,5 @@ components.d.ts
 *.njsproj
 *.sln
 *.sw?
+.env.gaobug
 

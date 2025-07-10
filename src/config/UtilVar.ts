@@ -9,10 +9,10 @@ interface UtilVarType {
 
 const UtilVar: UtilVarType = {
     baseUrl:import.meta.env.VITE_API_URL,
-    code: 401, //登陆过期
+    /** 登陆过期code */
+    code: 401,
     ENC_key:import.meta.env.VITE_API_ENC_KEY,
-    // resourceUrl: "https://www.daidaibg.com",
-    resourceUrl: "https://www.gaobug.com",
+    resourceUrl: import.meta.env.VITE_API_ENC_KEY.VITE_API_ENC_RESOURCE_URL,
     get assetsBaseUrl(): string {
         return this.resourceUrl
     }
