@@ -27,7 +27,7 @@ enum SearchType {
 }
 
 //关闭小屏幕搜索框
-const closeMiniSearch = () => {};
+const closeMiniSearch = () => { };
 
 //取消小屏幕搜索
 const cancelSearch = () => {
@@ -76,66 +76,35 @@ const search = (type?: SearchType) => {
     });
   }
 };
-const onInput = () => {};
+const onInput = () => { };
 
 setKeywords(searchVal.value);
 </script>
 
 <template>
   <div class="blog-search">
-    <el-input
-      v-model="searchVal"
-      class="mini-screen-hide blog-search-input"
-      placeholder="探索搞bug"
-      @keyup.enter.native="search"
-      @input="onInput"
-      clearable
-      @clear="search"
-    >
+    <el-input v-model="searchVal" class="mini-screen-hide blog-search-input" placeholder="探索搞bug"
+      @keyup.enter.native="search" @input="onInput" clearable @clear="search">
       <template #suffix>
         <div class="searc-suffix" @click="search()">
           <Search style="width: 16; height: 16" />
         </div>
       </template>
     </el-input>
-    <div class="mini-search-icon-box" @click="showMiniSearch()">
-      <span class="mini-search-text">{{ miniSearchVal }}</span>
-      <Search
-        style="width: 20; height: 20"
-        class="mini-screen-show mini-search-icon"
-      />
+    <div class="mini-screen-show">
+      <div class=" mini-search-icon-box" @click="showMiniSearch()">
+        <span class="mini-search-text">{{ miniSearchVal }}</span>
+        <Search style="width: 20; height: 20" class=" mini-search-icon" />
+      </div>
     </div>
 
-    <el-drawer
-      v-model="searchDislogShow"
-      :with-header="false"
-      append-to-body
-      @opened="miniOpened"
-      @close="closeMiniSearch()"
-      size="70px"
-      :close-on-click-modal="false"
-      direction="ttb"
-    >
+    <el-drawer v-model="searchDislogShow" :with-header="false" append-to-body @opened="miniOpened"
+      @close="closeMiniSearch()" size="70px" :close-on-click-modal="false" direction="ttb">
       <div class="mini-search-box">
-        <form
-          @submit.prevent="search(SearchType.Mini)"
-          class="mini-search-input"
-          action="javascript:return true;"
-        >
-          <input
-            type="search"
-            placeholder="探索搞bug"
-            class="search-input-inner"
-            v-model="miniSearchVal"
-            ref="miniSearchInput"
-          />
-          <yh-button
-            @click="search(SearchType.Mini)"
-            theme="primary"
-            class="search-btn"
-            type="button"
-            >搜素</yh-button
-          >
+        <form @submit.prevent="search(SearchType.Mini)" class="mini-search-input" action="javascript:return true;">
+          <input type="search" placeholder="探索搞bug" class="search-input-inner" v-model="miniSearchVal"
+            ref="miniSearchInput" />
+          <yh-button @click="search(SearchType.Mini)" theme="primary" class="search-btn" type="button">搜素</yh-button>
           <yh-button @click="cancelSearch()">取消</yh-button>
         </form>
         <div class="mini-search-content"></div>
@@ -148,15 +117,19 @@ setKeywords(searchVal.value);
 .blog-search {
   margin: 0 8px;
 }
+
 .searc-suffix {
   cursor: pointer;
+
   &:hover {
     color: var(--yh-brand-color);
   }
 }
+
 .mini-search-icon-box {
   display: flex;
   align-items: center;
+
   .mini-search-text {
     margin-right: 8px;
     font-size: 14px;
@@ -165,15 +138,19 @@ setKeywords(searchVal.value);
     white-space: nowrap;
     max-width: 140px;
   }
+
   .mini-search-icon {
     margin-right: 16px;
     cursor: pointer;
   }
+
   &:hover {
     cursor: pointer;
+
     .mini-search-icon {
       color: var(--yh-brand-color);
     }
+
     .mini-search-text {
       color: var(--yh-brand-color);
     }
@@ -195,15 +172,18 @@ setKeywords(searchVal.value);
     height: 28px;
     color: var(--yh-text-color-primary);
     flex: 1;
+
     &:hover,
     &:focus {
       border-color: var(--yh-brand-color);
     }
   }
+
   input::-webkit-search-decoration,
   input::-webkit-search-cancel-button {
     display: none;
   }
+
   .search-btn {
     margin-right: 12px;
   }

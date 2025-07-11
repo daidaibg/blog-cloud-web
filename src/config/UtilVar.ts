@@ -12,7 +12,7 @@ const UtilVar: UtilVarType = {
     /** 登陆过期code */
     code: 401,
     ENC_key:import.meta.env.VITE_API_ENC_KEY,
-    resourceUrl: import.meta.env.VITE_API_ENC_KEY.VITE_API_ENC_RESOURCE_URL,
+    resourceUrl: import.meta.env.VITE_API_ENC_RESOURCE_URL,
     get assetsBaseUrl(): string {
         return this.resourceUrl
     }
