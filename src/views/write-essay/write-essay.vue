@@ -50,7 +50,7 @@ const rules = reactive<FormRules>({
 });
 
 // 发布
-const fabu = () => {
+const nextPublish = () => {
   if (title.value == "") {
     ElMessage.warning({message:"请输入标题!",plain:true});
     return;
@@ -84,13 +84,13 @@ const save = () => {
 };
 
 //提交或则新增 处理参数并且提交调接口
-const saveOrUpdate = async (publish: Number, successMsg: string) => {
+const saveOrUpdate = async (isPublish: Number, successMsg: string) => {
   let requst = addBlog; //新增
   let param: any = {
     title: title.value,
     content: content.value,
     ...formData,
-    publish: publish, //是否发布0：否，1：是
+    publish: isPublish, //是否发布0：否，1：是
   };
   if (state.id) {
     param.id = state.id;
@@ -102,7 +102,7 @@ const saveOrUpdate = async (publish: Number, successMsg: string) => {
   const res = await requst(param);
   if (res.code === 200) {
     //保存草稿时需要存储id 后端暂无返回id
-    if (publish === 0) {
+    if (isPublish === 0) {
     }
     ElMessage.success({message:successMsg,plain:true});
     return true;
@@ -210,7 +210,7 @@ init();
       </div>
       <el-input v-model="title" placeholder="请输入文章标题" class="mr-2 ml-1" />
       <yh-button theme="default" size="medium" class="mx-2" shape="round" @click="save">保存草稿</yh-button>
-      <yh-button theme="primary" size="medium" class="mx-2" shape="round" @click="fabu">发布 </yh-button>
+      <yh-button theme="primary" size="medium" class="mx-2" shape="round" @click="nextPublish">发布 </yh-button>
       <user></user>
     </header>
     <div class="flex-1 relative content">
