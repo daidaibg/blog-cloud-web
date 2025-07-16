@@ -25,23 +25,18 @@ mdEditorConfig();
 </script>
 
 <template>
-  <MdPreview
-    :id="id"
-    :modelValue="props.text"
-    v-bind="$attrs"
-    :mdHeadingId="generateId"
-    :theme="themeStore.getTheme"
-    class="previewmd"
-    :previewTheme="previewTheme"
-    :codeTheme="codeTheme"
-    />
+  <MdPreview :id="id" :modelValue="props.text" v-bind="$attrs" :mdHeadingId="generateId" :theme="themeStore.getTheme"
+    class="previewmd" :previewTheme="previewTheme" :codeTheme="codeTheme" />
 </template>
 
 <style lang="scss">
-#md-preview-preview {
+.md-editor-previewOnly {
   table {
     width: 100%;
     display: table !important;
   }
 }
+</style>
+<style lang="scss" scoped>
+@use "@/assets/css/edit-md/preview";
 </style>

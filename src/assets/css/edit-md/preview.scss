@@ -1,0 +1,15 @@
+:deep(.md-editor-preview) {
+  ul,
+  ul li {
+    list-style: disc;
+  }
+
+  ol {
+    list-style: decimal;
+  }
+  // 取消默认吸顶，插件暂时不支持不惜顶
+  .md-editor-code .md-editor-code-head {
+    position: relative;
+    z-index: 0;
+  }
+}

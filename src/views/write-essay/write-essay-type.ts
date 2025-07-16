@@ -7,7 +7,7 @@ export  interface ClassificatioType {
 export interface StateType{
     title:string,
     content:string,
-    previewTheme:string,
+    previewTheme:previewTheme,
     dialogVisible:boolean,
     classificatio:Array<ClassificatioType> ,
     id:any

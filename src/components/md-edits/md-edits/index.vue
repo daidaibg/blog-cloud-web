@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import "md-editor-v3/lib/style.css";
 
 import { ref, computed, reactive, toRefs, PropType } from "vue";
 import { toolbars } from "./config";
 import { MdEditor } from "md-editor-v3";
+import "md-editor-v3/lib/style.css";
 import MdEmoji from "@/components/md-edits/md-emoji/md-emoji.vue";
 import ReadExtension from "@/components/md-edits/read/read.vue";
 import MarkExtension from "@/components/md-edits/mark-extension/index.vue";
@@ -20,7 +20,7 @@ const editorRef = ref<ExposeParam>();
 
 const props = defineProps({
   previewTheme: {
-    type: String as PropType<any>,
+    type: String as PropType<previewTheme>,
   },
 });
 
@@ -37,9 +37,9 @@ init();
 </script>
 
 <template>
-  <md-editor :toolbars="toolbars" class="editor_wrap" showCodeRowNumber :previewTheme="props.previewTheme" :auto-detect-code="true"
-    :theme="themeStore.getTheme" ref="editorRef" :id="editorId" @uploadImg="onUploadImg" :mdHeadingId="generateId"
-    v-bind="$attrs">
+  <md-editor :toolbars="toolbars" class="editor_wrap" showCodeRowNumber :previewTheme="props.previewTheme"
+    :auto-detect-code="true" :theme="themeStore.getTheme" ref="editorRef" :id="editorId" @uploadImg="onUploadImg"
+    :mdHeadingId="generateId" v-bind="$attrs">
     <template #defToolbars>
       <!-- <MarkExtension :id="editorId" @on-change="onChangeMark" />
             <MdEmoji :id="editorId" @onChange="onEmojiChange" /> -->
@@ -51,13 +51,17 @@ init();
   </md-editor>
 
 </template>
-
+<style lang="scss"></style>
 <style scoped lang="scss">
 @use "@/assets/css/edit-md/edit-md.scss" as edit;
+@use "@/assets/css/edit-md/preview";
+
 .editor_wrap {
   width: 100%;
   height: 100%;
+
+
+
   @include edit.editmdVar("write");
 }
-
 </style>

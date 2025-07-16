@@ -1,5 +1,5 @@
-@mixin editmdVar($type:preview) {
-  
+@mixin editmdVar($type: preview) {
+
   :deep(.md-editor-dark) {
     // background-color: var(--yh-bg-color-container);
     --md-color: var(--yh-text-color-secondary);
@@ -19,11 +19,11 @@
   }
 
   //当是写的时候
-  @if $type == 'write' {
+  @if $type == "write" {
     :deep(.md-editor-dark) {
       --md-bk-color: var(--yh-bg-color-page);
     }
-  }@else{
+  } @else {
     :deep(.md-editor-dark) {
       --md-bk-color: var(--yh-bg-color-container);
     }
@@ -34,4 +34,3 @@
     }
   }
 }
-

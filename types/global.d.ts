@@ -16,3 +16,4 @@ declare type codeText={
 declare type Recordable<T = any, K extends string | number | symbol = string> = Record<K extends null | undefined ? string : K, T>
 
 
+declare type previewTheme= 'default' | 'github' | 'vuepress' | 'mk-cute' | 'smart-blue' | 'cyanosis'
