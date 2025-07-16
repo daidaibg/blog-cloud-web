@@ -27,19 +27,15 @@ const mdText = ref<string>(""); //内容
 const blogDetails = ref<BlogDetailsType>({}); //详情
 const catalogList = ref<HeadList[]>([]); //目录
 const { setMetaTagContent } = useMetaContent();
-let moundFlag: boolean = false;
 
 //目录
 const onGetCatalog = (list: HeadList[]) => {
   catalogList.value = list;
-  if (!moundFlag) {
-    let timer = setTimeout(() => {
-      anchorHandle();
-      clearTimeout(timer);
-    }, 150);
-    moundFlag = true;
-  }
 };
+
+const onRemount = () => {
+  anchorHandle();
+}
 
 //点赞和取消点赞成功
 const like = (res: any) => {
@@ -57,7 +53,7 @@ const getDetail = () => {
       setMetaTagContent("description", res.data.summary == "" ? res.data.title : res.data.summary);
       setMetaTagContent("keywords", res.data.title);
     } else {
-      ElMessage.error({message:res.msg,plain:true});
+      ElMessage.error({ message: res.msg, plain: true });
     }
   });
 };
@@ -115,13 +111,8 @@ const goEditArticle = () => {
             </div>
           </div>
           <div class="attention" v-if="!blogDetails.isAuthor">
-            <yh-button
-              theme="primary"
-              size="medium"
-              variant="outline"
-              v-if="userStore.getUserData.id != blogDetails.author"
-              >关注</yh-button
-            >
+            <yh-button theme="primary" size="medium" variant="outline"
+              v-if="userStore.getUserData.id != blogDetails.author">关注</yh-button>
             <yh-button theme="primary" size="medium" variant="outline" v-else @click="goEditArticle()">编辑</yh-button>
           </div>
         </div>
@@ -129,13 +120,8 @@ const goEditArticle = () => {
           <img :src="blogDetails.coverUrl" alt="" class="cover" v-if="blogDetails.coverUrl" />
           <p class="summy break-all">{{ blogDetails.summary }}</p>
         </div>
-        <md-view
-          id="edit2preview"
-          showCodeRowNumber
-          class="mt-8"
-          :text="mdText"
-          @GetCatalog="onGetCatalog"
-          :mdHeadingId="generateId">
+        <md-view id="edit2preview" showCodeRowNumber class="mt-8" :text="mdText" @GetCatalog="onGetCatalog"
+          @onRemount="onRemount" :mdHeadingId="generateId">
         </md-view>
       </div>
 
@@ -165,18 +151,13 @@ const goEditArticle = () => {
               </li>
             </ul>
           </div>
-          <div
-            class="catalog_wrap container-bg box-border px-3 pb-2 box-shadow-0 flex flex-col"
+          <div class="catalog_wrap container-bg box-border px-3 pb-2 box-shadow-0 flex flex-col"
             v-show="catalogList.length > 0">
             <header class="py-2 logs-header">目录</header>
             <div class="catalog_list overflow-y-auto mt-1">
               <yh-anchor class=" " :targetOffset="80">
-                <yh-anchor-item
-                  :href="`#${generateId(item.text, 1, i + 1)}`"
-                  :title="item.text"
-                  v-for="(item, i) in catalogList"
-                  :key="i"
-                  :class="'catalog_list_' + item.level">
+                <yh-anchor-item :href="`#${generateId(item.text, 1, i + 1)}`" :title="item.text"
+                  v-for="(item, i) in catalogList" :key="i" :class="'catalog_list_' + item.level">
                   <!-- {{ `#${item.text}_${i + 1}`}} -->
                 </yh-anchor-item>
               </yh-anchor>
@@ -186,10 +167,7 @@ const goEditArticle = () => {
       </div>
       <comment :article-id="blogDetails.id" :avatarUrl="userStore.getUserData.avatar" @like="like" />
     </div>
-    <actions
-      :article-id="blogDetails.id"
-      :collectCount="blogDetails.collectCount"
-      :likeNum="blogDetails.clickCount"
+    <actions :article-id="blogDetails.id" :collectCount="blogDetails.collectCount" :likeNum="blogDetails.clickCount"
       :commentNum="blogDetails.openComment"></actions>
   </div>
 
@@ -198,6 +176,7 @@ const goEditArticle = () => {
 
 <style scoped lang="scss">
 @use "@/assets/css/edit-md/edit-md.scss" as edit;
+
 .details {
   position: relative;
 
@@ -279,9 +258,11 @@ const goEditArticle = () => {
 
       .catalog_list {
         width: calc(100% + 6px);
+
         .yh-anchor {
           width: 212px;
         }
+
         .yh-anchor__item {
           box-sizing: border-box;
           font-size: 14px;
@@ -293,10 +274,12 @@ const goEditArticle = () => {
             background-color: var(--yh-bg-color-container-hover);
           }
         }
+
         :deep(.yh-anchor__item-link) {
           padding: 6px 6px 6px 6px;
           width: 100%;
         }
+
         .catalog_list {
           &_2 {
             text-indent: 14px;
@@ -396,6 +379,7 @@ const goEditArticle = () => {
     // 封面与简介
     .cover-summy {
       flex-direction: column;
+
       .cover {
         max-width: 480px;
         max-height: 320px;
