@@ -25,6 +25,7 @@
     "dayjs": "^1.11.13",
     "element-plus": "^2.10.4",
     "file-saver": "^2.0.5",
+    "gsap": "^3.13.0",
     "marked": "^16.0.0",
     "md-editor-v3": "^5.8.0",
     "mermaid": "^11.8.1",

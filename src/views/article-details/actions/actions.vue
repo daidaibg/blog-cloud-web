@@ -4,6 +4,7 @@ import { useBlogAction } from "@/hook/modules/use-blog-action";
 import { articleDetailsConfig } from "@/config/article";
 import { windowScrollTo } from "@/utils/scroll";
 import { useRouter } from "vue-router";
+import { vClickEmoji } from "@/directives/gsap/click-emoji/click-Emoji";
 
 const { blogLike } = useBlogAction();
 const props = defineProps(Props);
@@ -37,14 +38,11 @@ const goComment = async (): Promise<void> => {
   // console.log(comment,scrollContainer,scrollTop,offsetTop,top);
 };
 
-
-
-
 </script>
 
 <template>
   <div class="detail-actions detail-root">
-    <div class="action_item" @click="onLike">
+    <div class="action_item" @click="onLike" v-click-emoji>
       <i class="dd-icon-dianzan_kuai icon"></i>
       <span class="badge" v-show="likeNum != 0">{{ likeNum }}</span>
     </div>

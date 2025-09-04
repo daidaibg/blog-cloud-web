@@ -25,7 +25,7 @@ mdEditorConfig();
 </script>
 
 <template>
-  <MdPreview :id="id" :modelValue="props.text" v-bind="$attrs" :mdHeadingId="generateId" :theme="themeStore.getTheme"
+  <MdPreview :id="id" :modelValue="props.text" v-bind="$attrs" :mdHeadingId="generateId" :theme="themeStore.getTheme" :codeStyleReverse="true"
     class="previewmd" :previewTheme="previewTheme" :codeTheme="codeTheme" />
 </template>
 

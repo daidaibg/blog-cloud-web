@@ -59,9 +59,6 @@ init();
 .editor_wrap {
   width: 100%;
   height: 100%;
-
-
-
   @include edit.editmdVar("write");
 }
 </style>
