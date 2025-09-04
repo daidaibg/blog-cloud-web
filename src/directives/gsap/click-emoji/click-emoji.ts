@@ -8,12 +8,37 @@ export interface ClickEmojiOptions {
 }
 
 const defaultEmojis = [
-  "🎉", "😘", "🎊", "🤡", "🥳", "🤪", "💗",
-  "❤️", "💖", "💛", "💚", "💙", "💜",    
-  "👍", "👏", "🙌", "🤝", "✌️", "👌",     
-  "🔥", "✨", "🌟", "💯", "🎈", "🎵" ,
-    "🎈", "🎈🎈", "🎈🎉", "🎁", "🎂"    
-]
+  "🎉",
+  "😘",
+  "🎊",
+  "🤡",
+  "🥳",
+  "🤪",
+  "💗",
+  "❤️",
+  "💖",
+  "💛",
+  "💚",
+  "💙",
+  "💜",
+  "👍",
+  "👏",
+  "🙌",
+  "🤝",
+  "✌️",
+  "👌",
+  "🔥",
+  "✨",
+  "🌟",
+  "💯",
+  "🎈",
+  "🎵",
+  "🎈",
+  "🎈🎈",
+  "🎈🎉",
+  "🎁",
+  "🎂",
+];
 
 function createEmoji(x: number, y: number, options: ClickEmojiOptions) {
   const dot = document.createElement("div");
@@ -21,23 +46,26 @@ function createEmoji(x: number, y: number, options: ClickEmojiOptions) {
     options.emojis?.[Math.floor(Math.random() * options.emojis.length)] ??
     defaultEmojis[Math.floor(Math.random() * defaultEmojis.length)];
 
+  // 随机微调，让出来更自然
+  const offsetX = (Math.random() - 0.5) * 8;
+  const offsetY = 6;
+
   Object.assign(dot.style, {
     position: "absolute",
     left: `${x}px`,
     top: `${y}px`,
     fontSize: "24px",
     pointerEvents: "none",
-    transform: "translate(0,0)",
+    transform: `translate(calc(-50% + ${offsetX}px), calc(-50% - ${offsetY}px))`,
   });
 
   document.body.appendChild(dot);
 
-  const dx = (Math.random() - 0.5) * (options.radius ?? 300); // 水平偏移减少
+  const dx = (Math.random() - 0.5) * (options.radius ?? 300);
   const delay = Math.random() * 0.2;
-  const peak = -(50 + Math.random() * 50); // 飞升高度减少
-  const drop = 50 + Math.random() * 50; // 落下高度
+  const peak = -(50 + Math.random() * 50);
+  const drop = 50 + Math.random() * 50;
 
-  // 模拟 CSS custom-x + custom-y
   gsap.to(dot, {
     x: dx,
     duration: 1,
@@ -88,7 +116,7 @@ function createNum(x: number, y: number) {
     color: "#fff",
     textShadow: "2px 2px 0 red",
     pointerEvents: "none",
-    transform: "translate(-50%, -60%) scale(0.4)", // 水平居中，垂直稍微靠下
+    transform: "translate(-50%, -60%) scale(0.4)",
     opacity: "0",
   });
 
@@ -118,13 +146,14 @@ export const vClickEmoji: Directive<HTMLElement, ClickEmojiOptions> = {
   mounted(el, binding) {
     const handler = (ev: MouseEvent) => {
       const options = binding.value || {};
-      const { clientX, clientY } = ev;
+      const x = ev.pageX;
+      const y = ev.pageY;
       const maxCount = options.count ?? 6;
-      const emojiCount = Math.floor(Math.random() * maxCount) + 1; 
+      const emojiCount = Math.floor(Math.random() * maxCount) + 1;
       for (let i = 0; i < emojiCount; i++) {
-        createEmoji(clientX, clientY, options);
+        createEmoji(x, y, options);
       }
-      createNum(clientX, clientY);
+      createNum(x, y);
     };
     el.addEventListener("click", handler);
     (el as any)._clickEmojiHandler = handler;
