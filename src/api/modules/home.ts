@@ -70,7 +70,7 @@ export const getBlogCategoryPage = (param: any) => {
  * 验证码
  */
 export const getCaptchaEmail = (param: any) => {
-  return requestGet(Home.captchaEmail, param);
+  return requestPost(Home.captchaEmail, param);
 };
 
 /**新增博客 */

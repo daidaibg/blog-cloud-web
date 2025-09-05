@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import LoginForm from "./login-form";
+import Logo3D from "@/components/logo/logo3D/logo3D.vue";
 </script>
 
 <template>
@@ -17,8 +18,8 @@ import LoginForm from "./login-form";
       <li>搞bug</li>
     </ul>
     <div class="login_wrap">
-      <div></div>
-      <login-form></login-form>
+        <Logo3D/>
+      <login-form class="login-login-form"></login-form>
     </div>
   </div>
 </template>
@@ -33,11 +34,11 @@ import LoginForm from "./login-form";
   align-items: center;
   justify-content: center;
   // background-image: linear-gradient(270deg, #af8fca, #7095f3);
-      //  rgba(242, 185, 178, 1),
-    // rgba(20, 145, 168, 1),
-    // rgba(147, 181, 207, 1),
-    // rgba(85, 187, 138, 1),
-    // rgba(226, 216, 73, 1)
+  //  rgba(242, 185, 178, 1),
+  // rgba(20, 145, 168, 1),
+  // rgba(147, 181, 207, 1),
+  // rgba(85, 187, 138, 1),
+  // rgba(226, 216, 73, 1)
   background-image: linear-gradient(
     45deg,
     var(--yh-error-color-4),
@@ -47,12 +48,14 @@ import LoginForm from "./login-form";
   );
   background-size: 400%;
   animation: bganimation 15s infinite;
-  
+
   .login_wrap {
     margin-top: -100px;
-    width: 1200px;
+    width: 100%;
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     position: relative;
     z-index: 2;
   }
@@ -172,5 +175,9 @@ import LoginForm from "./login-form";
     opacity: 0;
     transform: translateY(-1000px) rotate(180deg);
   }
+}
+.login-login-form {
+  background-color: rgba(var( --yh-text-color-anti-rgb), 0.45);
+  border: rgba(var( --yh-text-color-anti-rgb), 0.3);
 }
 </style>
