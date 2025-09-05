@@ -8,6 +8,7 @@ import { useRouter } from "vue-router";
 import { postLogin } from "@/api/modules/home";
 import { setLocalStorage, validatePhone } from "@/utils";
 import { StorageEnum } from "@/enums";
+
 const router = useRouter();
 const userStore = useUserStore();
 
@@ -196,6 +197,7 @@ const submitPhone = (formEl: FormInstance | undefined) => {
           <el-input v-model="loginForm.password" type="password" autocomplete="off" placeholder="请输入密码" />
         </el-form-item>
       </el-form>
+      
       <yh-button theme="primary" block size="large" @click="submit(formRef)" :loading="formLoading">登 录 </yh-button>
       <div class="action flex justify-between mt-1.5">
         <span class="register" @click="register">去注册</span>
@@ -278,4 +280,6 @@ const submitPhone = (formEl: FormInstance | undefined) => {
     color: var(--yh-warning-color);
   }
 }
+
+
 </style>

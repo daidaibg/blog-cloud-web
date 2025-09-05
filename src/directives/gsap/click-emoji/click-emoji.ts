@@ -1,12 +1,15 @@
 import type { Directive } from "vue";
 import gsap from "gsap";
+import confetti from "canvas-confetti";
 
 export interface ClickEmojiOptions {
   emojis?: string[];
   count?: number;
   radius?: number;
+  confettiChance?: number; // 触发礼花桶的概率，0~1，默认0.3
 }
 
+// 你的默认 emojis
 const defaultEmojis = [
   "🎉",
   "😘",
@@ -18,9 +21,6 @@ const defaultEmojis = [
   "❤️",
   "💖",
   "💛",
-  "💚",
-  "💙",
-  "💜",
   "👍",
   "👏",
   "🙌",
@@ -31,8 +31,6 @@ const defaultEmojis = [
   "✨",
   "🌟",
   "💯",
-  "🎈",
-  "🎵",
   "🎈",
   "🎈🎈",
   "🎈🎉",
@@ -46,7 +44,6 @@ function createEmoji(x: number, y: number, options: ClickEmojiOptions) {
     options.emojis?.[Math.floor(Math.random() * options.emojis.length)] ??
     defaultEmojis[Math.floor(Math.random() * defaultEmojis.length)];
 
-  // 随机微调，让出来更自然
   const offsetX = (Math.random() - 0.5) * 8;
   const offsetY = 6;
 
@@ -66,13 +63,7 @@ function createEmoji(x: number, y: number, options: ClickEmojiOptions) {
   const peak = -(50 + Math.random() * 50);
   const drop = 50 + Math.random() * 50;
 
-  gsap.to(dot, {
-    x: dx,
-    duration: 1,
-    ease: "linear",
-    delay,
-  });
-
+  gsap.to(dot, { x: dx, duration: 1, ease: "linear", delay });
   gsap.to(dot, {
     y: peak,
     rotation: 180,
@@ -122,9 +113,8 @@ function createNum(x: number, y: number) {
 
   document.body.appendChild(numDiv);
 
-  // 模拟 count-shark CSS 动画
   gsap.to(numDiv, {
-    y: "-=30", // 向上漂浮
+    y: "-=30",
     scale: 1,
     opacity: 1,
     duration: 0.3,
@@ -142,16 +132,63 @@ function createNum(x: number, y: number) {
   });
 }
 
+function randomInRange(min: number, max: number) {
+  return Math.random() * (max - min) + min;
+}
+function createConfettiBucket(x: number, y: number) {
+  // 创建 canvas（只创建一次）
+  let canvas = document.getElementById("confetti-canvas") as HTMLCanvasElement | null;
+  if (!canvas) {
+    canvas = document.createElement("canvas");
+    canvas.id = "confetti-canvas";
+    canvas.style.position = "fixed";
+    canvas.style.top = "0";
+    canvas.style.left = "0";
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
+    canvas.style.pointerEvents = "none";
+    canvas.style.zIndex = "9999";
+
+    document.body.appendChild(canvas);
+  }
+
+  const myConfetti = confetti.create(canvas, { resize: true, useWorker: false });
+
+  // 礼花桶：随机角度、散布和粒子数
+  myConfetti({
+    angle: randomInRange(55, 125),
+    spread: randomInRange(50, 70),
+    particleCount: randomInRange(50, 100),
+    origin: { x: x / window.innerWidth, y: y / window.innerHeight },
+    colors: ["#ff0000", "#ff9900", "#ffff00", "#00ff00", "#00ffff", "#0000ff", "#ff00ff"],
+  });
+
+  // 爆炸延迟效果
+  myConfetti({
+    angle: randomInRange(55, 125),
+    spread: randomInRange(50, 70),
+    particleCount: randomInRange(100, 200),
+    origin: { x: x / window.innerWidth, y: y / window.innerHeight },
+    colors: ["#ff0000", "#ff9900", "#ffff00", "#00ff00", "#00ffff", "#0000ff", "#ff00ff"],
+  });
+}
+
 export const vClickEmoji: Directive<HTMLElement, ClickEmojiOptions> = {
   mounted(el, binding) {
     const handler = (ev: MouseEvent) => {
       const options = binding.value || {};
       const x = ev.pageX;
       const y = ev.pageY;
-      const maxCount = options.count ?? 6;
-      const emojiCount = Math.floor(Math.random() * maxCount) + 1;
-      for (let i = 0; i < emojiCount; i++) {
-        createEmoji(x, y, options);
+
+      // 随机选择触发原 emoji 或者礼花桶
+      if (Math.random() < (options.confettiChance ?? 0.5)) {
+        createConfettiBucket(ev.clientX, ev.clientY);
+      } else {
+        const maxCount = options.count ?? 6;
+        const emojiCount = Math.floor(Math.random() * maxCount) + 1;
+        for (let i = 0; i < emojiCount; i++) {
+          createEmoji(x, y, options);
+        }
       }
       createNum(x, y);
     };
