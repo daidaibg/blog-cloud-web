@@ -2,6 +2,7 @@
 import LoginForm from "./login-form";
 import Logo3D from "@/components/logo/logo3D/logo3D.vue";
 import MouseFollowParticles from "@/components/gasp/mouse/mouse-follow-particles/mouse-follow-particles.vue";
+import NeonGlassCard from "@/components/card/neon-glass/neon-glass-card.vue";
 </script>
 
 <template>
@@ -19,13 +20,12 @@ import MouseFollowParticles from "@/components/gasp/mouse/mouse-follow-particles
       <li>搞bug</li>
     </ul>
     <div class="login_wrap">
-        <Logo3D/>
-      <login-form class="login-login-form"></login-form>
+      <Logo3D />
+     
+      <NeonGlassCard> <login-form class="login-login-form"></login-form></NeonGlassCard>
     </div>
     <MouseFollowParticles></MouseFollowParticles>
-
   </div>
-
 </template>
 
 <style scoped lang="scss">
@@ -181,7 +181,8 @@ import MouseFollowParticles from "@/components/gasp/mouse/mouse-follow-particles
   }
 }
 .login-login-form {
-  background-color: rgba(var( --yh-text-color-anti-rgb), 0.45);
-  border: rgba(var( --yh-text-color-anti-rgb), 0.3);
+  // background-color: rgba(var(--yh-text-color-anti-rgb), 0.45);
+  // border: rgba(var(--yh-text-color-anti-rgb), 0.3);
+  background: transparent;
 }
 </style>

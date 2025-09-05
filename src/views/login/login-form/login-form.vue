@@ -113,7 +113,7 @@ function sendeSuccess() {
 //账号登录
 const submit = (formEl: FormInstance | undefined) => {
   if (!formEl) return;
-  formEl.validate((valid):any => {
+  formEl.validate((valid): any => {
     if (valid) {
       formLoading.value = true;
       postLogin({ account: loginForm.account, password: loginForm.password, loginType: "1" }).then(async (res: any) => {
@@ -143,7 +143,7 @@ const submit = (formEl: FormInstance | undefined) => {
 // 手机号登陆注册
 const submitPhone = (formEl: FormInstance | undefined) => {
   if (!formEl) return;
-  formEl.validate((valid):any => {
+  formEl.validate((valid): any => {
     if (valid) {
     } else {
       return false;
@@ -197,7 +197,7 @@ const submitPhone = (formEl: FormInstance | undefined) => {
           <el-input v-model="loginForm.password" type="password" autocomplete="off" placeholder="请输入密码" />
         </el-form-item>
       </el-form>
-      
+
       <yh-button theme="primary" block size="large" @click="submit(formRef)" :loading="formLoading">登 录 </yh-button>
       <div class="action flex justify-between mt-1.5">
         <span class="register" @click="register">去注册</span>
@@ -212,6 +212,8 @@ const submitPhone = (formEl: FormInstance | undefined) => {
   background-color: var(--yh-bg-color-container);
   border-radius: 10px;
   box-shadow: var(--yh-shadow-1);
+
+
 
   .captcha {
     :deep(.el-input-group__append) {
@@ -280,6 +282,4 @@ const submitPhone = (formEl: FormInstance | undefined) => {
     color: var(--yh-warning-color);
   }
 }
-
-
 </style>
