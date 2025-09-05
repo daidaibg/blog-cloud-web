@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import LoginForm from "./login-form";
 import Logo3D from "@/components/logo/logo3D/logo3D.vue";
+import MouseFollowParticles from "@/components/gasp/mouse/mouse-follow-particles/mouse-follow-particles.vue";
 </script>
 
 <template>
@@ -21,7 +22,10 @@ import Logo3D from "@/components/logo/logo3D/logo3D.vue";
         <Logo3D/>
       <login-form class="login-login-form"></login-form>
     </div>
+    <MouseFollowParticles></MouseFollowParticles>
+
   </div>
+
 </template>
 
 <style scoped lang="scss">
