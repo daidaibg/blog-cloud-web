@@ -280,6 +280,11 @@ watch(
             font-weight: bold;
             color: var(--yh-text-color-brand);
           }
+          .account-actions{
+            display: flex;
+            align-items: center;
+            gap: 4px;
+          }
         }
 
         &:last-child {
