@@ -183,6 +183,14 @@ const routes: Array<RouteRecordRaw> = [
       },
     ],
   },
+  {
+    path: RouterEnum.GoOutAndWalk,
+    name: RouterEnum.GoOutAndWalk,
+    component: () => import(/* webpackChunkName: "GoOutAndWalk" */ "../views/tools/go-out-walk/go-out-walk.vue"),
+    meta: {
+      title: "出去走走",
+    },
+  },
 ];
 
 const router = createRouter({

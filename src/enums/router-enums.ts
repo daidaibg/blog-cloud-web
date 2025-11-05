@@ -28,4 +28,7 @@ export enum RouterEnum {
     Chat="/chat",
     /**html预览 */
     HtmlPreview="/html/preview",
+
+    /**出去走走 */
+    GoOutAndWalk="/go/out/walk",
 }
