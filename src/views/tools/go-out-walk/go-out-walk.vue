@@ -2,7 +2,7 @@
 import { ref, onMounted, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { Plus, Close } from "@element-plus/icons-vue";
-import { sendXiaomiMotionForm } from "@/api/tool/index";
+import { sendXiaomiMotionForm,send } from "@/api/tool/index";
 interface Account {
   username: string;
   password: string;
@@ -20,6 +20,11 @@ const accounts = ref<Account[]>([
     target: defaultTarget,
   },
 ]);
+const init=()=>{
+  send()
+}
+
+init()
 
 // 每个账号的提交状态：'idle' | 'sending' | 'success' | 'failed'
 const statuses = ref<string[]>(accounts.value.map(() => "idle"));
