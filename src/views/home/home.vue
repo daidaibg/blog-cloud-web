@@ -85,6 +85,7 @@ const onClassify = (item: ClassifyListType) => {
 // 获取博客列表
 const getBlogList = () => {
   state.loading = true;
+  const currentPage = state.blogPage.current;
   getBlog({
     ...state.blogPage,
     type: active.value,
@@ -115,8 +116,14 @@ const getBlogList = () => {
       }
     } else {
       state.loading = false;
+      state.loadingEnd = true;
+      state.blogPage.current = Math.max(currentPage - 1, 1);
       ElMessage.error({message:res.msg,plain:true});
     }
+  }).catch(() => {
+    state.loading = false;
+    state.loadingEnd = true;
+    state.blogPage.current = Math.max(currentPage - 1, 1);
   });
 };
 
@@ -151,7 +158,7 @@ useInfiniteScroll(
     interval: 100,
     canLoadMore: () => {
       if (route.path === RouterEnum.Home) {
-        return !state.loading || !state.loadingEnd;
+        return !state.loading && !state.loadingEnd;
       }
       return false;
     },
