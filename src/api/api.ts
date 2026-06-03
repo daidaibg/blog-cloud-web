@@ -7,6 +7,7 @@ import { getToken } from "@/utils/auth";
 import sm4 from "@/utils/sm4/sm4";
 import type { fileconfigs, Config } from "./index.d";
 // console.log(router);
+console.log(UtilVar);
 const baseUrl = UtilVar.baseUrl;
 const CancelToken = axios.CancelToken;
 

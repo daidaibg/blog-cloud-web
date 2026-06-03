@@ -5,10 +5,13 @@ import { articleDetailsConfig } from "@/config/article";
 import { windowScrollTo } from "@/utils/scroll";
 import { useRouter } from "vue-router";
 import { vClickEmoji } from "@/directives/gsap/click-emoji/click-Emoji";
+import { ref, watch } from "vue";
 
 const { blogLike } = useBlogAction();
 const props = defineProps(Props);
 const router = useRouter();
+const isLiked = ref(!!props.isLike);
+const likeCount = ref(Number(props.likeNum) || 0);
 
 const emits = defineEmits<{
   (e: "like", res: any): void;
@@ -20,16 +23,33 @@ const onLike = () => {
     {
       targetId: props.articleId,
       targetType: 1,
-      likeFlag: 1,
+      likeFlag: isLiked.value ? 0 : 1,
     },
     {
       success: (res: any) => {
         // console.log(res);
+        const nextLiked = !isLiked.value;
+        isLiked.value = nextLiked;
+        likeCount.value = Math.max(likeCount.value + (nextLiked ? 1 : -1), 0);
         emits("like", res);
       },
     }
   );
 };
+
+watch(
+  () => props.isLike,
+  (val) => {
+    isLiked.value = !!val;
+  }
+);
+
+watch(
+  () => props.likeNum,
+  (val) => {
+    likeCount.value = Number(val) || 0;
+  }
+);
 
 const goComment = async (): Promise<void> => {
   const id = "#" + articleDetailsConfig.commentAnchor;
@@ -42,9 +62,9 @@ const goComment = async (): Promise<void> => {
 
 <template>
   <div class="detail-actions detail-root">
-    <div class="action_item" @click="onLike" v-click-emoji>
+    <div class="action_item" :class="{ liked: isLiked }" @click="onLike" v-click-emoji>
       <i class="dd-icon-dianzan_kuai icon"></i>
-      <span class="badge" v-show="likeNum != 0">{{ likeNum }}</span>
+      <span class="badge" v-show="likeCount != 0">{{ likeCount }}</span>
     </div>
     <div class="action_item" @click="goComment">
       <i class="dd-icon-pinglun1 icon"></i>
@@ -103,6 +123,17 @@ const goComment = async (): Promise<void> => {
 
       .icon {
         color: var(--yh-text-color-secondary);
+      }
+    }
+
+    &.liked {
+      .icon {
+        color: var(--yh-brand-color);
+      }
+
+      .badge {
+        background-color: var(--yh-brand-color);
+        color: var(--yh-text-color-anti);
       }
     }
   }

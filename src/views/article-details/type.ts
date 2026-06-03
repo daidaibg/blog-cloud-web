@@ -18,13 +18,16 @@ export interface BlogDetailsType {
   tag?: string,
   openComment?: number,
   collectCount?: number,
-  clickCount?: number
+  clickCount?: number,
+  likeCount?: number,
+  isLike?: boolean
 }
 export interface ActionProps {
   articleId?: BlogDetailsType["id"],
-  likeNum?: BlogDetailsType["clickCount"],
+  likeNum?: BlogDetailsType["likeCount"],
   commentNum?: BlogDetailsType["openComment"],
   collectCount?: BlogDetailsType["collectCount"],
+  isLike?: BlogDetailsType["isLike"],
   onLike:Function
 }
 

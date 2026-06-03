@@ -27,4 +27,4 @@ components.d.ts
 *.sln
 *.sw?
 .env.gaobug
-
+.codex/

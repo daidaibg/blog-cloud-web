@@ -17,4 +17,8 @@ export default {
     likeNum:[String, Number] as PropType<ActionProps['collectCount']>,
     default:0
   },
+  isLike:{
+    type:Boolean as PropType<ActionProps['isLike']>,
+    default:false
+  },
 }

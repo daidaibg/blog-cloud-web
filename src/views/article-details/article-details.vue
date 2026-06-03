@@ -167,7 +167,7 @@ const goEditArticle = () => {
       </div>
       <comment :article-id="blogDetails.id" :avatarUrl="userStore.getUserData.avatar" @like="like" />
     </div>
-    <actions :article-id="blogDetails.id" :collectCount="blogDetails.collectCount" :likeNum="blogDetails.clickCount"
+    <actions :article-id="blogDetails.id" :collectCount="blogDetails.collectCount" :likeNum="blogDetails.likeCount" :isLike="blogDetails.isLike"
       :commentNum="blogDetails.openComment"></actions>
   </div>
 
