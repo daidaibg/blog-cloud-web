@@ -110,7 +110,7 @@ const goEditArticle = () => {
               <span class="ml-2">标签：{{ blogDetails.tag }}</span>
             </div>
           </div>
-          <div class="attention" v-if="!blogDetails.isAuthor">
+          <div class="attention">
             <yh-button theme="primary" size="medium" variant="outline"
               v-if="userStore.getUserData.id != blogDetails.author">关注</yh-button>
             <yh-button theme="primary" size="medium" variant="outline" v-else @click="goEditArticle()">编辑</yh-button>
