@@ -4,24 +4,28 @@ import { useBlogAction } from "@/hook/modules/use-blog-action";
 import { articleDetailsConfig } from "@/config/article";
 import { windowScrollTo } from "@/utils/scroll";
 import { useRouter } from "vue-router";
-import { vClickEmoji } from "@/directives/gsap/click-emoji/click-Emoji";
-import { ref, watch } from "vue";
+import { vClickEmoji } from "@/directives/gsap/click-emoji/click-emoji";
+import { computed } from "vue";
+import type { ActionLikePayload } from "../type";
 
 const { blogLike } = useBlogAction();
 const props = defineProps(Props);
 const router = useRouter();
-const isLiked = ref(!!props.isLike);
-const likeCount = ref(Number(props.likeNum) || 0);
+const details = computed(() => props.details || {});
+const isLiked = computed(() => !!details.value.isLike);
+const likeCount = computed(() => Number(details.value.likeCount) || 0);
+const commentNum = computed(() => Number(details.value.openComment) || 0);
+const collectCount = computed(() => Number(details.value.collectCount) || 0);
 
 const emits = defineEmits<{
-  (e: "like", res: any): void;
+  (e: "like", payload: ActionLikePayload): void;
 }>();
 
 //点赞
 const onLike = () => {
   blogLike(
     {
-      targetId: props.articleId,
+      targetId: details.value.id,
       targetType: 1,
       likeFlag: isLiked.value ? 0 : 1,
     },
@@ -29,27 +33,16 @@ const onLike = () => {
       success: (res: any) => {
         // console.log(res);
         const nextLiked = !isLiked.value;
-        isLiked.value = nextLiked;
-        likeCount.value = Math.max(likeCount.value + (nextLiked ? 1 : -1), 0);
-        emits("like", res);
+        const nextLikeCount = Math.max(likeCount.value + (nextLiked ? 1 : -1), 0);
+        emits("like", {
+          res,
+          isLike: nextLiked,
+          likeCount: nextLikeCount,
+        });
       },
     }
   );
 };
-
-watch(
-  () => props.isLike,
-  (val) => {
-    isLiked.value = !!val;
-  }
-);
-
-watch(
-  () => props.likeNum,
-  (val) => {
-    likeCount.value = Number(val) || 0;
-  }
-);
 
 const goComment = async (): Promise<void> => {
   const id = "#" + articleDetailsConfig.commentAnchor;
@@ -62,7 +55,7 @@ const goComment = async (): Promise<void> => {
 
 <template>
   <div class="detail-actions detail-root">
-    <div class="action_item" :class="{ liked: isLiked }" @click="onLike" v-click-emoji>
+    <div class="action_item" :class="{ liked: isLiked }" @click="onLike" v-click-emoji="{ type: isLiked ? 'cancel' : 'like' }">
       <i class="dd-icon-dianzan_kuai icon"></i>
       <span class="badge" v-show="likeCount != 0">{{ likeCount }}</span>
     </div>

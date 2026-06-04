@@ -12,7 +12,7 @@ import { userThemeStore, useUserStore } from "@/store";
 import Backtop from "@/components/backtop";
 import Actions from "./actions";
 import Comment from "./comment";
-import { PreviewThemeType, BlogDetailsType, CodeTheme } from "./type";
+import { PreviewThemeType, BlogDetailsType, CodeTheme, ActionLikePayload } from "./type";
 import { useMetaContent } from "@/hook";
 import { RouterEnum } from "@/enums/router-enums";
 import { windowScrollTo } from "@/utils/scroll";
@@ -38,7 +38,12 @@ const onRemount = () => {
 }
 
 //点赞和取消点赞成功
-const like = (res: any) => {
+const onActionLike = ({ isLike, likeCount }: ActionLikePayload) => {
+  blogDetails.value.isLike = isLike;
+  blogDetails.value.likeCount = likeCount;
+};
+
+const like = () => {
   getDetail();
 };
 
@@ -167,8 +172,7 @@ const goEditArticle = () => {
       </div>
       <comment :article-id="blogDetails.id" :avatarUrl="userStore.getUserData.avatar" @like="like" />
     </div>
-    <actions :article-id="blogDetails.id" :collectCount="blogDetails.collectCount" :likeNum="blogDetails.likeCount" :isLike="blogDetails.isLike"
-      :commentNum="blogDetails.openComment"></actions>
+    <actions :details="blogDetails" @like="onActionLike"></actions>
   </div>
 
   <backtop> </backtop>

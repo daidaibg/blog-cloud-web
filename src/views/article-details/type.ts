@@ -23,12 +23,13 @@ export interface BlogDetailsType {
   isLike?: boolean
 }
 export interface ActionProps {
-  articleId?: BlogDetailsType["id"],
-  likeNum?: BlogDetailsType["likeCount"],
-  commentNum?: BlogDetailsType["openComment"],
-  collectCount?: BlogDetailsType["collectCount"],
-  isLike?: BlogDetailsType["isLike"],
-  onLike:Function
+  details?: BlogDetailsType
+}
+
+export interface ActionLikePayload {
+  res: any;
+  isLike: boolean;
+  likeCount: number;
 }
 
 export interface CommentProps {

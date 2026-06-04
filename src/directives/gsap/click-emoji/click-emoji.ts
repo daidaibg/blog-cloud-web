@@ -3,6 +3,7 @@ import gsap from "gsap";
 import confetti from "canvas-confetti";
 
 export interface ClickEmojiOptions {
+  type?: "like" | "cancel";
   emojis?: string[];
   count?: number;
   radius?: number;
@@ -84,11 +85,85 @@ function createEmoji(x: number, y: number, options: ClickEmojiOptions) {
   });
 }
 
-function createNum(x: number, y: number) {
+function createSadEmojiBurst(x: number, y: number) {
+  const emojis = ["😢", "😭", "😥", "😿", "💀", "☠️", "🖤", "🩶", "🥀", "🌑", "🕳️"];
+  const count = Math.floor(randomInRange(6, 13));
+
+  for (let i = 0; i < count; i++) {
+    const dot = document.createElement("div");
+    dot.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+
+    Object.assign(dot.style, {
+      position: "absolute",
+      left: `${x}px`,
+      top: `${y}px`,
+      fontSize: "18px",
+      pointerEvents: "none",
+      transform: "translate(-50%, -50%) scale(0.4)",
+      opacity: "0",
+    });
+
+    document.body.appendChild(dot);
+
+    const delay = randomInRange(0, 0.12);
+    const direction = randomInRange(0, Math.PI * 2);
+    const distance = randomInRange(18, 52);
+    const burstX = Math.cos(direction) * distance;
+    const burstY = Math.sin(direction) * randomInRange(8, 22);
+    const followDistance = randomInRange(46, 96);
+    const driftX = burstX + Math.cos(direction) * followDistance;
+    const dropY = burstY + Math.sin(direction) * followDistance + randomInRange(130, 210);
+    const burstDuration = randomInRange(0.08, 0.14);
+    const dropDuration = randomInRange(0.5, 0.72);
+
+    gsap
+      .timeline({
+        delay,
+        onComplete: () => dot.remove(),
+      })
+      .to(dot, {
+        opacity: 1,
+        scale: randomInRange(0.8, 1.15),
+        duration: 0,
+        ease: "power2.out",
+      })
+      .to(
+        dot,
+        {
+          x: burstX,
+          y: burstY,
+          rotation: randomInRange(-35, 35),
+          duration: burstDuration,
+          ease: "power2.out",
+        },
+        "<"
+      )
+      .to(dot, {
+        x: driftX,
+        duration: dropDuration,
+        ease: "sine.out",
+      })
+      .to(
+        dot,
+        {
+          y: dropY,
+          rotation: randomInRange(-100, 100),
+          scale: randomInRange(0.35, 0.65),
+          opacity: 0,
+          duration: dropDuration,
+          ease: "power3.in",
+        },
+        "<"
+      );
+  }
+}
+
+function createNum(x: number, y: number, options: ClickEmojiOptions = {}) {
+  const isCancel = options.type === "cancel";
   const current = document.querySelector(".custom-num") as HTMLDivElement | null;
   let num = 1;
 
-  if (current) {
+  if (!isCancel && current) {
     num = parseInt(current.getAttribute("num") || "0") + 1;
     current.remove();
   }
@@ -96,22 +171,61 @@ function createNum(x: number, y: number) {
   const numDiv = document.createElement("div");
   numDiv.className = "custom-num";
   numDiv.setAttribute("num", num.toString());
-  numDiv.textContent = `+${num}`;
+  numDiv.textContent = isCancel ? "😢" : `+${num}`;
 
   Object.assign(numDiv.style, {
     position: "absolute",
     left: `${x}px`,
     top: `${y}px`,
-    fontSize: "28px",
+    fontSize: isCancel ? "30px" : "28px",
     fontWeight: "bold",
-    color: "#fff",
-    textShadow: "2px 2px 0 red",
+    color: isCancel ? "#333" : "#fff",
+    textShadow: isCancel ? "1px 1px 0 rgba(0, 0, 0, 0.25)" : "2px 2px 0 red",
     pointerEvents: "none",
     transform: "translate(-50%, -60%) scale(0.4)",
+    transformOrigin: "50% 80%",
     opacity: "0",
   });
 
   document.body.appendChild(numDiv);
+
+  if (isCancel) {
+    gsap
+      .timeline({
+        onComplete: () => numDiv.remove(),
+      })
+      .to(numDiv, {
+        y: "-=8",
+        scale: 1.15,
+        opacity: 1,
+        duration: 0.18,
+        ease: "back.out(2)",
+      })
+      .to(numDiv, {
+        x: "-=10",
+        rotation: -12,
+        duration: 0.12,
+        ease: "sine.inOut",
+      })
+      .to(numDiv, {
+        x: "+=20",
+        rotation: 12,
+        duration: 0.12,
+        ease: "sine.inOut",
+        repeat: 2,
+        yoyo: true,
+      })
+      .to(numDiv, {
+        x: "-=10",
+        rotation: 0,
+        scale: 1.35,
+        opacity: 0,
+        duration: 0.16,
+        ease: "power2.out",
+        onStart: () => createSadEmojiBurst(x, y - 8),
+      });
+    return;
+  }
 
   gsap.to(numDiv, {
     y: "-=30",
@@ -175,10 +289,16 @@ function createConfettiBucket(x: number, y: number) {
 
 export const vClickEmoji: Directive<HTMLElement, ClickEmojiOptions> = {
   mounted(el, binding) {
+    (el as any)._clickEmojiOptions = binding.value || {};
     const handler = (ev: MouseEvent) => {
-      const options = binding.value || {};
+      const options = (el as any)._clickEmojiOptions || {};
       const x = ev.pageX;
       const y = ev.pageY;
+
+      if (options.type === "cancel") {
+        createNum(x, y, options);
+        return;
+      }
 
       // 随机选择触发原 emoji 或者礼花桶
       if (Math.random() < (options.confettiChance ?? 0.5)) {
@@ -190,10 +310,13 @@ export const vClickEmoji: Directive<HTMLElement, ClickEmojiOptions> = {
           createEmoji(x, y, options);
         }
       }
-      createNum(x, y);
+      createNum(x, y, options);
     };
     el.addEventListener("click", handler);
     (el as any)._clickEmojiHandler = handler;
+  },
+  updated(el, binding) {
+    (el as any)._clickEmojiOptions = binding.value || {};
   },
   unmounted(el) {
     const handler = (el as any)._clickEmojiHandler;

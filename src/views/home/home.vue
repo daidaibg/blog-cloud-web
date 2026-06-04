@@ -13,6 +13,7 @@ import { useHeaderStore } from "@/store";
 import { articleDetailsConfig } from "@/config/article";
 import type { ClassifyListType, HomeBlogState, TypeList } from "./home-types";
 import { RouterEnum } from "@/enums";
+import { vClickEmoji } from "@/directives/gsap/click-emoji/click-emoji";
 
 const router = useRouter();
 const route = useRoute();
@@ -34,14 +35,17 @@ const { blogLike } = useBlogAction();
 // 点赞
 const onLike = (item: any) => {
   console.log(item);
+  const nextLiked = !item.isLike;
   blogLike(
     {
       targetId: item.id,
       targetType: 1,
-      likeFlag: 1,
+      likeFlag: nextLiked ? 1 : 0,
     },
     {
       success: (res: any) => {
+        item.isLike = nextLiked;
+        item.likeCount = Math.max((Number(item.likeCount) || 0) + (nextLiked ? 1 : -1), 0);
         ElMessage.success({
           message: res.msg,
           plain: true,
@@ -248,8 +252,8 @@ onActivated(() => {
                     <i class="dd-icon-liulan icon"></i>
                     <span>{{ item.clickCount }}</span>
                   </div>
-                  <div class="info-box_action-item hovers" @click.stop="onLike(item)">
-                    <i class="dd-icon-dianzan icon"></i>
+                  <div class="info-box_action-item hovers" :class="{ liked: item.isLike }" @click.stop="onLike(item)" v-click-emoji="{ type: item.isLike ? 'cancel' : 'like' }">
+                    <i class="icon" :class="item.isLike ? 'dd-icon-dianzan_kuai' : 'dd-icon-dianzan'"></i>
                     <span>{{ item.likeCount }}</span>
                   </div>
                   <div class="info-box_action-item hovers" @click.stop="goDetailComment(item)">
@@ -419,6 +423,13 @@ $font-gray-1: var(--dd-font-gray-1);
           }
 
           &:hover {
+            .icon,
+            span {
+              color: $color-brand;
+            }
+          }
+
+          &.liked {
             .icon,
             span {
               color: $color-brand;
