@@ -250,7 +250,7 @@ onActivated(() => {
                 <div class="info-box_action flex items-center">
                   <div class="info-box_action-item">
                     <i class="dd-icon-liulan icon"></i>
-                    <span>{{ item.clickCount }}</span>
+                    <span>{{ item.clickCount || 0 }}</span>
                   </div>
                   <div class="info-box_action-item hovers" :class="{ liked: item.isLike }" @click.stop="onLike(item)" v-click-emoji="{ type: item.isLike ? 'cancel' : 'like' }">
                     <i class="icon" :class="item.isLike ? 'dd-icon-dianzan_kuai' : 'dd-icon-dianzan'"></i>
@@ -408,7 +408,8 @@ $font-gray-1: var(--dd-font-gray-1);
         &-item {
           display: flex;
           align-items: center;
-          margin-right: 20px;
+          margin: -7px 12px -7px -8px;
+          padding: 7px 8px;
           line-height: 1;
 
           .icon {

@@ -108,7 +108,7 @@ const goEditArticle = () => {
               <span class="mx-2 details_right">·</span>
               <span class=""> {{ blogDetails.createTime }} </span>
               <span class="mx-2">·</span>
-              阅读{{ 0 }}
+              阅读{{ blogDetails.clickCount || 0 }}
             </div>
             <div class="flex">
               <span>分类：{{ blogDetails.categoryName || "-" }}</span>
