@@ -26,6 +26,7 @@ const router = useRouter();
 const mdText = ref<string>(""); //内容
 const blogDetails = ref<BlogDetailsType>({}); //详情
 const catalogList = ref<HeadList[]>([]); //目录
+const isDetailLoading = ref<boolean>(true);
 const { setMetaTagContent } = useMetaContent();
 
 //目录
@@ -44,23 +45,32 @@ const onActionLike = ({ isLike, likeCount }: ActionLikePayload) => {
 };
 
 const like = () => {
-  getDetail();
+  getDetail(false);
 };
 
 //获取详情
-const getDetail = () => {
-  getNoLoginBlogDetail(route.params.id as string).then((res: any) => {
-    // console.log("getDetail",res);
-    if (res.code == 200) {
-      blogDetails.value = res.data;
-      mdText.value = res.data.content;
-      title.value = res.data.title; // change current title
-      setMetaTagContent("description", res.data.summary == "" ? res.data.title : res.data.summary);
-      setMetaTagContent("keywords", res.data.title);
-    } else {
-      ElMessage.error({ message: res.msg, plain: true });
-    }
-  });
+const getDetail = (showLoading = true) => {
+  if (showLoading) {
+    isDetailLoading.value = true;
+  }
+  getNoLoginBlogDetail(route.params.id as string)
+    .then((res: any) => {
+      // console.log("getDetail",res);
+      if (res.code == 200) {
+        blogDetails.value = res.data;
+        mdText.value = res.data.content;
+        title.value = res.data.title; // change current title
+        setMetaTagContent("description", res.data.summary == "" ? res.data.title : res.data.summary);
+        setMetaTagContent("keywords", res.data.title);
+      } else {
+        ElMessage.error({ message: res.msg, plain: true });
+      }
+    })
+    .finally(() => {
+      if (showLoading) {
+        isDetailLoading.value = false;
+      }
+    });
 };
 
 //处理锚点
@@ -95,10 +105,34 @@ const goEditArticle = () => {
   <div class="gaobug details">
     <div class="details_inner">
       <div class="container-bg box-border px-6 py-3 conetnt">
-        <div class="details_title" id="1">
+        <el-skeleton v-if="isDetailLoading" class="details-skeleton" animated>
+          <template #template>
+            <el-skeleton-item variant="h1" class="skeleton-title" />
+            <div class="skeleton-user">
+              <el-skeleton-item variant="circle" class="skeleton-avatar" />
+              <div class="skeleton-user-lines">
+                <el-skeleton-item variant="text" class="skeleton-meta" />
+                <el-skeleton-item variant="text" class="skeleton-meta-short" />
+              </div>
+            </div>
+            <div class="skeleton-cover-summy">
+              <el-skeleton-item variant="image" class="skeleton-cover" />
+              <div class="skeleton-summary">
+                <el-skeleton :rows="3" animated />
+              </div>
+            </div>
+            <div class="skeleton-content">
+              <el-skeleton-item variant="h3" />
+              <el-skeleton :rows="4" animated />
+              <el-skeleton-item variant="h3" />
+              <el-skeleton :rows="2" animated />
+            </div>
+          </template>
+        </el-skeleton>
+        <div v-show="!isDetailLoading" class="details_title" id="1">
           {{ blogDetails.title }}
         </div>
-        <div class="user_info mt-3 flex items-center">
+        <div v-show="!isDetailLoading" class="user_info mt-3 flex items-center">
           <div class="user_info_avatar mr-2">
             <img src="../../assets/img/avatar.png" alt="" />
           </div>
@@ -121,11 +155,11 @@ const goEditArticle = () => {
             <yh-button theme="primary" size="medium" variant="outline" v-else @click="goEditArticle()">编辑</yh-button>
           </div>
         </div>
-        <div class="cover-summy flex mt-4">
+        <div v-show="!isDetailLoading" class="cover-summy flex mt-4">
           <img :src="blogDetails.coverUrl" alt="" class="cover" v-if="blogDetails.coverUrl" />
           <p class="summy break-all">{{ blogDetails.summary }}</p>
         </div>
-        <md-view id="edit2preview" showCodeRowNumber class="mt-8" :text="mdText" @GetCatalog="onGetCatalog"
+        <md-view v-show="!isDetailLoading" id="edit2preview" showCodeRowNumber class="mt-8" :text="mdText" @GetCatalog="onGetCatalog"
           @onRemount="onRemount" :mdHeadingId="generateId">
         </md-view>
       </div>
@@ -134,7 +168,22 @@ const goEditArticle = () => {
         <!-- <el-affix :offset="81" target="body">
             </el-affix> -->
         <div class="silder_inner">
-          <div class="author_info container-bg mb-4 box-border px-3 py-2">
+          <div v-if="isDetailLoading" class="author_info container-bg mb-4 box-border px-3 py-2">
+            <el-skeleton animated>
+              <template #template>
+                <div class="skeleton-side-user">
+                  <el-skeleton-item variant="circle" class="skeleton-side-avatar" />
+                  <el-skeleton-item variant="text" class="skeleton-side-name" />
+                </div>
+                <div class="skeleton-side-num">
+                  <el-skeleton-item variant="text" />
+                  <el-skeleton-item variant="text" />
+                  <el-skeleton-item variant="text" />
+                </div>
+              </template>
+            </el-skeleton>
+          </div>
+          <div v-else class="author_info container-bg mb-4 box-border px-3 py-2">
             <div class="author_header flex items-center">
               <img src="../../assets/img/avatar.png" :alt="blogDetails.authorName" class="author_img" />
               <div class="user_name truncate flex-1">
@@ -156,8 +205,16 @@ const goEditArticle = () => {
               </li>
             </ul>
           </div>
+          <div v-if="isDetailLoading" class="catalog_wrap container-bg box-border px-3 pb-2 box-shadow-0 flex flex-col">
+            <el-skeleton animated>
+              <template #template>
+                <el-skeleton-item variant="h3" class="skeleton-catalog-title" />
+                <el-skeleton :rows="4" animated />
+              </template>
+            </el-skeleton>
+          </div>
           <div class="catalog_wrap container-bg box-border px-3 pb-2 box-shadow-0 flex flex-col"
-            v-show="catalogList.length > 0">
+            v-show="!isDetailLoading && catalogList.length > 0">
             <header class="py-2 logs-header">目录</header>
             <div class="catalog_list overflow-y-auto mt-1">
               <yh-anchor class=" " :targetOffset="80">
@@ -170,9 +227,9 @@ const goEditArticle = () => {
           </div>
         </div>
       </div>
-      <comment :article-id="blogDetails.id" :avatarUrl="userStore.getUserData.avatar" @like="like" />
+      <comment v-if="!isDetailLoading" :article-id="blogDetails.id" :avatarUrl="userStore.getUserData.avatar" @like="like" />
     </div>
-    <actions :details="blogDetails" @like="onActionLike"></actions>
+    <actions v-if="!isDetailLoading" :details="blogDetails" @like="onActionLike"></actions>
   </div>
 
   <backtop> </backtop>
@@ -191,6 +248,65 @@ const goEditArticle = () => {
   .conetnt {
     min-height: $content-height;
     border-radius: $border-radius;
+
+    .details-skeleton {
+      .skeleton-title {
+        width: 72%;
+        height: 34px;
+      }
+
+      .skeleton-user {
+        display: flex;
+        align-items: center;
+        margin-top: 18px;
+      }
+
+      .skeleton-avatar {
+        width: 40px;
+        height: 40px;
+        flex-shrink: 0;
+      }
+
+      .skeleton-user-lines {
+        width: 320px;
+        margin-left: 8px;
+      }
+
+      .skeleton-meta {
+        width: 100%;
+      }
+
+      .skeleton-meta-short {
+        width: 62%;
+        margin-top: 8px;
+      }
+
+      .skeleton-cover-summy {
+        display: flex;
+        margin-top: 16px;
+      }
+
+      .skeleton-cover {
+        width: 240px;
+        height: 160px;
+        border-radius: 10px;
+        flex-shrink: 0;
+      }
+
+      .skeleton-summary {
+        flex: 1;
+        margin-left: 16px;
+      }
+
+      .skeleton-content {
+        margin-top: 32px;
+
+        .el-skeleton__item {
+          margin-bottom: 14px;
+        }
+      }
+
+    }
 
     .details_title {
       font-size: 28.8px;
@@ -249,6 +365,34 @@ const goEditArticle = () => {
       width: $right-width;
       position: fixed;
       top: 80px;
+    }
+
+    .skeleton-side-user {
+      display: flex;
+      align-items: center;
+    }
+
+    .skeleton-side-avatar {
+      width: 40px;
+      height: 40px;
+      flex-shrink: 0;
+    }
+
+    .skeleton-side-name {
+      width: 120px;
+      margin-left: 8px;
+    }
+
+    .skeleton-side-num {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .skeleton-catalog-title {
+      width: 70px;
+      margin: 10px 0 16px;
     }
 
     .catalog_wrap {
@@ -370,6 +514,30 @@ const goEditArticle = () => {
       .conetnt {
         .details_title {
           font-size: 22px;
+        }
+
+        .details-skeleton {
+          .skeleton-title {
+            width: 88%;
+          }
+
+          .skeleton-user-lines {
+            width: 100%;
+          }
+
+          .skeleton-cover-summy {
+            flex-direction: column;
+          }
+
+          .skeleton-cover {
+            width: 100%;
+            max-width: 480px;
+            height: 220px;
+          }
+
+          .skeleton-summary {
+            margin: 14px 0 0;
+          }
         }
 
         :deep(.yh-button) {
