@@ -4,15 +4,19 @@ import { defineStore } from 'pinia'
 export const useHeaderStore = defineStore('header', () => {
     const headerSearch = reactive<{
         keywords:string,
-        num:number
+        searchVersion:number
     }>({
         keywords:"",
-        num:0
+        searchVersion:0
     })
 
-    const setKeywords=(val:string)=>{
+    const setSearchKeywords=(val:string)=>{
         headerSearch.keywords=val
-        headerSearch.num++
     }
-    return {headerSearch,setKeywords}
+
+    const submitSearch=(val:string)=>{
+        setSearchKeywords(val)
+        headerSearch.searchVersion++
+    }
+    return {headerSearch,setSearchKeywords,submitSearch}
 })

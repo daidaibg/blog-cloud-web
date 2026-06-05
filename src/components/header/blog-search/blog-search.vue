@@ -12,7 +12,7 @@ const searchVal = ref<string>((route as any).query.s || "");
 const miniSearchVal = ref<string>(searchVal.value);
 const miniSearchInput = ref<HTMLInputElement>();
 const searchDislogShow = ref<boolean>(false);
-const { setKeywords } = useHeaderStore();
+const { setSearchKeywords, submitSearch } = useHeaderStore();
 
 interface Props {
   active: string;
@@ -63,7 +63,7 @@ const search = (type?: SearchType) => {
     val = miniSearchVal.value;
     hideMiniSearch();
   }
-  setKeywords(val);
+  submitSearch(val);
   if (props.active !== RouterEnum.Home) {
     router.replace({
       query: {
@@ -78,7 +78,7 @@ const search = (type?: SearchType) => {
 };
 const onInput = () => { };
 
-setKeywords(searchVal.value);
+setSearchKeywords(searchVal.value);
 </script>
 
 <template>

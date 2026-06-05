@@ -170,8 +170,8 @@ useInfiniteScroll(
 );
 
 watch(
-  () => headerStore.headerSearch.num,
-  (val) => {
+  () => headerStore.headerSearch.searchVersion,
+  () => {
     state.blogPage.current = 1;
     state.keywords = headerStore.headerSearch.keywords;
     getBlogList();
