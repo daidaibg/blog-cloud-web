@@ -78,7 +78,8 @@ const anchorHandle = async () => {
   await nextTick();
   if (route.hash) {
     console.log(route.hash);
-    const str = `[id="${route.hash.slice(1).replace(/\s/g, "%20")}"]`;
+    const hashId = decodeURIComponent(route.hash.slice(1));
+    const str = `[id="${hashId}"]`;
     windowScrollTo(str, 74);
   }
 };
@@ -218,7 +219,7 @@ const goEditArticle = () => {
             <header class="py-2 logs-header">目录</header>
             <div class="catalog_list overflow-y-auto mt-1">
               <yh-anchor class=" " :targetOffset="80">
-                <yh-anchor-item :href="`#${generateId(item.text, 1, i + 1)}`" :title="item.text"
+                <yh-anchor-item :href="`#${generateId({ ...item, index: i + 1 })}`" :title="item.text"
                   v-for="(item, i) in catalogList" :key="i" :class="'catalog_list_' + item.level">
                   <!-- {{ `#${item.text}_${i + 1}`}} -->
                 </yh-anchor-item>

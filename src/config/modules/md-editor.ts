@@ -19,10 +19,20 @@ export const bootCdn="https://cdn.bootcdn.net/ajax/libs"
 const highlightJsBaseCdn = `${bootCdn}/highlight.js/11.10.0/`;
 // 代码高亮cdn链接
 
-export const generateId = (text: string, level: number, index: number): string => {
-  const id = (text + "_" + index).replace(/ /g, "-");
-  // const id =(text+"_"+index).replace(/ /g, '-')
-  return id;
+type HeadingIdOptions = {
+  text: string;
+  level: number;
+  index: number;
+  currentToken?: unknown;
+  nextToken?: unknown;
+};
+
+const createHeadingSlug = (text: string): string => {
+  return text.trim().toLowerCase().replace(/\s+/g, "-");
+};
+
+export const generateId = ({ text, index }: HeadingIdOptions): string => {
+  return `${createHeadingSlug(text)}-${index}`;
 };
 
 // const getId = (text: string, level: string | number, raw: any, index: number) => {
