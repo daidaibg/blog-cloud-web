@@ -38,6 +38,9 @@ export const tagsList = [
     name: 'git',
   },
   {
+    name: '向僵尸开炮',
+  },
+  {
     name: '无',
   },
 ]

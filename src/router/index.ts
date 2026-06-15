@@ -121,12 +121,33 @@ const routes: Array<RouteRecordRaw> = [
         },
       },
       {
+        path: RouterEnum.SvgPreview,
+        name: RouterEnum.SvgPreview,
+        component: () => import(/* webpackChunkName: "tools" */ "../views/tools/code/svg-preview/index.vue"),
+        meta: {
+          title: "SVG预览编辑",
+          noSplice: true,
+          isShowHeader: true,
+        },
+      },
+      {
         path: RouterEnum.Chicken,
         name: RouterEnum.Chicken,
         component: () => import(/* webpackChunkName: "tools" */ "../views/tools/chicken/chicken.vue"),
         meta: {
           title: "只因太美",
           noSplice: true,
+        },
+      },
+      {
+        path: RouterEnum.XiangJiangshiKaipaoEquipment,
+        name: RouterEnum.XiangJiangshiKaipaoEquipment,
+        component: () =>
+          import(/* webpackChunkName: "tools" */ "../views/tools/向僵尸开炮/equipment-entries.vue"),
+        meta: {
+          title: "向僵尸开炮装备词条表",
+          noSplice: true,
+          isShowHeader: true,
         },
       },
     ],

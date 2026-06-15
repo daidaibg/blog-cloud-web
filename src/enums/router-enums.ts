@@ -24,9 +24,12 @@ export enum RouterEnum {
 
     //只因太美
     Chicken="/chicken",
+    //向僵尸开炮装备词条表
+    XiangJiangshiKaipaoEquipment="/xiang-jiangshi-kaipao/equipment",
     //chatGpt
     Chat="/chat",
     /**html预览 */
     HtmlPreview="/html/preview",
+    SvgPreview="/svg/preview",
 
 }

@@ -2,6 +2,7 @@
 import { RouterEnum } from "@/enums";
 import { useRouter } from "vue-router";
 import UtilVar from "@/config/UtilVar"
+import seasonMapImg from "@/assets/img/tool/kaipao-season-map.png";
 
 const wrapUrl = UtilVar.assetsBaseUrl;
 
@@ -33,6 +34,15 @@ const toolList = [
         type: "inner",
         img: wrapUrl+"/blog-cloud-tool/img/tools/html.png",
         url: RouterEnum.HtmlPreview,
+      },
+      {
+        title: "SVG预览编辑",
+        id: "15",
+        type: "inner",
+        img: `${
+          import.meta.env.BASE_URL.length == 1 ? "" : import.meta.env.BASE_URL
+        }/static-files/code-format/code-format-icon/svg.svg`,
+        url: RouterEnum.SvgPreview,
       },
       {
         title: "节日倒计时",
@@ -83,6 +93,27 @@ const toolList = [
         type: "out",
         img: wrapUrl+"/blog-cloud-tool/img/love.png",
         url: wrapUrl+"/blog-cloud-tool/baidu/url/index.html",
+      },
+    ],
+  },
+  {
+    title: "向僵尸开炮",
+    id: 4,
+    emoji: "🎮",
+    list: [
+      {
+        title: "赛季地图",
+        id: 41,
+        type: "out",
+        img: seasonMapImg,
+        url: "https://www.gaobug.com/blog-cloud-tool/kaipao/kaipao.html",
+      },
+      {
+        title: "装备词条表",
+        id: 42,
+        type: "inner",
+        img: seasonMapImg,
+        url: RouterEnum.XiangJiangshiKaipaoEquipment,
       },
     ],
   },

@@ -1,0 +1,7 @@
+{
+  "github.copilot.chat.commitMessageGeneration.instructions": [
+    {
+      "text": "为本项目生成 Git Commit Message 时，默认使用简体中文，只输出一行，格式为 type: 简短描述。不要包含 scope、正文、项目符号或解释。中文保持原样输出，不要转义、转码、拼音化或 Unicode 编码。涉及忽略文件或忽略规则时，按忽略整个文件夹来描述。"
+    }
+  ]
+}
