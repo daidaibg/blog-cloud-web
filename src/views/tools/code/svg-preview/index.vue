@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
-import { Brush, CopyDocument, Delete, Refresh, View, ZoomIn, ZoomOut } from "@element-plus/icons-vue";
+import { Brush, CopyDocument, Delete, EditPen, Refresh, ZoomIn, ZoomOut } from "@element-plus/icons-vue";
 import { useEventListener } from "@vueuse/core";
 import Loading from "@/components/loading";
 
@@ -53,6 +53,19 @@ const writeLocal = (key: string, value: string) => {
 const clampSplit = (value: number) => Math.min(72, Math.max(28, value));
 const clampScale = (value: number) => Math.min(8, Math.max(0.2, value));
 const removeXmlns = (source: string) => source.replace(/\sxmlns(:\w+)?="[^"]*"/gi, "");
+const editableSelector = [
+  "circle",
+  "ellipse",
+  "g",
+  "image",
+  "line",
+  "path",
+  "polygon",
+  "polyline",
+  "rect",
+  "text",
+  "use",
+].join(",");
 
 const normalizeViewBoxText = (source: string) => {
   const values = source
@@ -164,6 +177,36 @@ const isPanning = ref(false);
 const previewScale = ref(1);
 const previewOffset = reactive({ x: 0, y: 0 });
 const lastPanPoint = reactive({ x: 0, y: 0 });
+const selectedSvgElementId = ref("");
+const selectedElementName = ref("");
+const selectionBox = reactive({
+  left: 0,
+  top: 0,
+  width: 0,
+  height: 0,
+  visible: false,
+});
+const activeElementEdit = reactive<{
+  mode: "" | "move" | "scale" | "rotate";
+  elementId: string;
+  startPoint: { x: number; y: number };
+  centerPoint: { x: number; y: number };
+  terminalStartPoint: { x: number; y: number };
+  startDistance: number;
+  startAngle: number;
+  startMatrix: DOMMatrix | null;
+  startContent: string;
+}>({
+  mode: "",
+  elementId: "",
+  startPoint: { x: 0, y: 0 },
+  centerPoint: { x: 0, y: 0 },
+  terminalStartPoint: { x: 0, y: 0 },
+  startDistance: 1,
+  startAngle: 0,
+  startMatrix: null,
+  startContent: "",
+});
 
 const splitGridStyle = computed(() => ({
   gridTemplateColumns: `minmax(260px, ${previewRatio.value}fr) 12px minmax(320px, ${100 - previewRatio.value}fr)`,
@@ -190,6 +233,8 @@ const getCanvasAnchorPoint = (clientX: number, clientY: number) => {
 
 const parsedViewBox = computed(() => normalizeViewBoxText(viewBoxText.value).split(","));
 const previewViewBox = computed(() => parsedViewBox.value.join(" "));
+const hasSelectedElement = computed(() => Boolean(selectedSvgElementId.value && selectionBox.visible));
+const isSelectedTerminal = computed(() => selectedSvgElementId.value.startsWith("terminal:"));
 
 const parseTagAttributes = (source: string) => {
   const attrs: Record<string, string | true> = {};
@@ -207,9 +252,10 @@ const parseTagAttributes = (source: string) => {
  * TerminalPosition 不是标准 SVG 节点，浏览器不会把它画出来。
  * 预览渲染时将它替换为圆点，并追加到内容末尾，保证端子点显示在其它图形上方。
  */
-const renderTerminalPositions = (source: string) => {
+const renderTerminalPositions = (source: string, options: { editable?: boolean } = {}) => {
   const terminalDots: string[] = [];
   const terminalPattern = /<TerminalPosition\b([^>]*)\/>|<TerminalPosition\b([^>]*)>\s*<\/TerminalPosition>/gi;
+  let terminalIndex = 0;
 
   const content = source.replace(terminalPattern, (_, selfClosingAttrs = "", pairedAttrs = "") => {
     const attrs = parseTagAttributes(selfClosingAttrs || pairedAttrs);
@@ -217,8 +263,12 @@ const renderTerminalPositions = (source: string) => {
     const y = Number(attrs.y);
     if (!Number.isFinite(x) || !Number.isFinite(y)) return "";
 
+    const editAttrs = options.editable
+      ? ` data-svg-edit-id="terminal:${terminalIndex}" data-svg-edit-kind="TerminalPosition"`
+      : "";
+    terminalIndex += 1;
     terminalDots.push(
-      `<circle cx="${x}" cy="${y}" r="0.5" fill="#fff" stroke="var(--yh-brand-color)" stroke-width="0.25"/>`,
+      `<circle${editAttrs} cx="${x}" cy="${y}" r="0.5" fill="#fff" stroke="var(--yh-brand-color)" stroke-width="0.25"/>`,
     );
     return "";
   });
@@ -226,9 +276,32 @@ const renderTerminalPositions = (source: string) => {
   return [content.trim(), ...terminalDots].filter(Boolean).join("\n");
 };
 
-const buildSvgSource = (innerSource = editorOption.editValue, options: { renderTerminals?: boolean } = {}) => {
+const markEditableElements = (source: string) => {
+  if (!source || typeof DOMParser === "undefined") return source;
+
+  const doc = new DOMParser().parseFromString(`<svg>${source}</svg>`, "image/svg+xml");
+  const svg = doc.querySelector("svg");
+  if (!svg || doc.querySelector("parsererror")) return source;
+
+  Array.from(svg.querySelectorAll(editableSelector)).forEach((node, index) => {
+    node.setAttribute("data-svg-edit-id", `node:${index}`);
+  });
+
+  return Array.from(svg.childNodes)
+    .map((node) => new XMLSerializer().serializeToString(node))
+    .join("\n")
+    .trim();
+};
+
+const buildSvgSource = (
+  innerSource = editorOption.editValue,
+  options: { renderTerminals?: boolean; editable?: boolean } = {},
+) => {
   const rawContent = removeXmlns(getEditorContent(innerSource));
-  const content = options.renderTerminals ? renderTerminalPositions(rawContent) : rawContent;
+  const editableContent = options.editable ? markEditableElements(rawContent) : rawContent;
+  const content = options.renderTerminals
+    ? renderTerminalPositions(editableContent, { editable: options.editable })
+    : editableContent;
   if (!content.trim()) return "";
   return `<svg viewBox="${previewViewBox.value}">\n${content.trim()}\n</svg>`;
 };
@@ -237,14 +310,36 @@ const buildSvgSource = (innerSource = editorOption.editValue, options: { renderT
  * 预览使用 v-html 渲染，因此渲染前需要移除脚本、foreignObject 和事件属性。
  */
 const sanitizeSvg = (source: string) => {
-  if (!source || typeof DOMParser === "undefined") return "";
+  if (!source) {
+    return {
+      error: "",
+      svg: "",
+    };
+  }
+  if (typeof DOMParser === "undefined") {
+    return {
+      error: "当前浏览器不支持 SVG 解析，无法生成预览。",
+      svg: "",
+    };
+  }
 
   const doc = new DOMParser().parseFromString(source, "image/svg+xml");
-  if (doc.querySelector("parsererror")) return "";
+  const parserError = doc.querySelector("parsererror");
+  if (parserError) {
+    return {
+      error: parserError.textContent?.trim() || "SVG 解析失败，请检查标签是否闭合、属性引号是否完整。",
+      svg: "",
+    };
+  }
 
   doc.querySelectorAll("script, foreignObject, iframe, object, embed").forEach((node) => node.remove());
   const svg = doc.querySelector("svg");
-  if (!svg) return "";
+  if (!svg) {
+    return {
+      error: "没有找到可预览的 svg 内容。",
+      svg: "",
+    };
+  }
 
   [svg, ...Array.from(svg.querySelectorAll("*"))].forEach((node) => {
     Array.from(node.attributes).forEach((attr) => {
@@ -256,10 +351,307 @@ const sanitizeSvg = (source: string) => {
     });
   });
 
-  return new XMLSerializer().serializeToString(svg);
+  return {
+    error: "",
+    svg: new XMLSerializer().serializeToString(svg),
+  };
 };
 
-const previewSvg = computed(() => sanitizeSvg(buildSvgSource(editorOption.editValue, { renderTerminals: true })));
+const previewResult = computed(() => sanitizeSvg(buildSvgSource(editorOption.editValue, { renderTerminals: true, editable: true })));
+const previewSvg = computed(() => previewResult.value.svg);
+const previewError = computed(() => previewResult.value.error);
+
+const getSelectedPreviewElement = () => {
+  if (!selectedSvgElementId.value) return null;
+  return (
+    previewCanvasRef.value?.querySelector<SVGGraphicsElement>(`[data-svg-edit-id="${selectedSvgElementId.value}"]`) ||
+    null
+  );
+};
+
+const updateSelectionBox = () => {
+  const contentRect = previewContentRef.value?.getBoundingClientRect();
+  const selectedElement = getSelectedPreviewElement();
+  if (!contentRect || !selectedElement) {
+    selectionBox.visible = false;
+    return;
+  }
+
+  try {
+    const box = selectedElement.getBBox();
+    const matrix = selectedElement.getScreenCTM();
+    if (!matrix) {
+      selectionBox.visible = false;
+      return;
+    }
+
+    const padding = 0.5;
+    const corners = [
+      new DOMPoint(box.x - padding, box.y - padding),
+      new DOMPoint(box.x + box.width + padding, box.y - padding),
+      new DOMPoint(box.x + box.width + padding, box.y + box.height + padding),
+      new DOMPoint(box.x - padding, box.y + box.height + padding),
+    ].map((point) => point.matrixTransform(matrix));
+    const left = Math.min(...corners.map((point) => point.x));
+    const top = Math.min(...corners.map((point) => point.y));
+    const right = Math.max(...corners.map((point) => point.x));
+    const bottom = Math.max(...corners.map((point) => point.y));
+
+    selectionBox.left = left - contentRect.left;
+    selectionBox.top = top - contentRect.top;
+    selectionBox.width = Math.max(right - left, 1);
+    selectionBox.height = Math.max(bottom - top, 1);
+    selectionBox.visible = true;
+  } catch {
+    const rect = selectedElement.getBoundingClientRect();
+    selectionBox.left = rect.left - contentRect.left;
+    selectionBox.top = rect.top - contentRect.top;
+    selectionBox.width = Math.max(rect.width, 1);
+    selectionBox.height = Math.max(rect.height, 1);
+    selectionBox.visible = true;
+  }
+};
+
+const scheduleSelectionBoxUpdate = () => {
+  requestAnimationFrame(updateSelectionBox);
+};
+
+const getSvgPoint = (element: SVGGraphicsElement, clientX: number, clientY: number) => {
+  const svg = element.ownerSVGElement;
+  const matrix = svg?.getScreenCTM()?.inverse();
+  if (!svg || !matrix) return null;
+
+  const point = svg.createSVGPoint();
+  point.x = clientX;
+  point.y = clientY;
+  const svgPoint = point.matrixTransform(matrix);
+  return {
+    x: svgPoint.x,
+    y: svgPoint.y,
+  };
+};
+
+const getElementCenterPoint = (element: SVGGraphicsElement) => {
+  const box = element.getBBox();
+  const matrix = element.getCTM();
+  const center = new DOMPoint(box.x + box.width / 2, box.y + box.height / 2);
+  const point = matrix ? center.matrixTransform(matrix) : center;
+  return {
+    x: point.x,
+    y: point.y,
+  };
+};
+
+const formatSvgNumber = (value: number) => String(Number(value.toFixed(4)));
+
+const setXmlAttribute = (attrs: string, name: string, value: string) => {
+  const attrPattern = new RegExp(`(\\s${name}\\s*=\\s*)(["'])(.*?)\\2`, "i");
+  if (attrPattern.test(attrs)) {
+    return attrs.replace(attrPattern, `$1$2${value}$2`);
+  }
+
+  return `${attrs.trimEnd()} ${name}="${value}"`;
+};
+
+const updateTerminalPosition = (terminalId: string, x: number, y: number, source = editorOption.editValue) => {
+  const terminalIndex = Number(terminalId.replace("terminal:", ""));
+  if (!Number.isFinite(terminalIndex)) return;
+
+  let currentIndex = -1;
+  const terminalPattern = /<TerminalPosition\b([^>]*)\/>|<TerminalPosition\b([^>]*)>\s*<\/TerminalPosition>/gi;
+  const nextContent = source.replace(terminalPattern, (full, selfClosingAttrs = "", pairedAttrs = "") => {
+    const attrs = parseTagAttributes(selfClosingAttrs || pairedAttrs);
+    if (!Number.isFinite(Number(attrs.x)) || !Number.isFinite(Number(attrs.y))) return full;
+
+    currentIndex += 1;
+    if (currentIndex !== terminalIndex) return full;
+
+    const nextAttrs = setXmlAttribute(
+      setXmlAttribute(selfClosingAttrs || pairedAttrs, "x", formatSvgNumber(x)),
+      "y",
+      formatSvgNumber(y),
+    );
+    return selfClosingAttrs ? `<TerminalPosition${nextAttrs}/>` : `<TerminalPosition${nextAttrs}></TerminalPosition>`;
+  });
+
+  editorOption.editValue = nextContent;
+};
+
+const translatePathData = (value: string, dx: number, dy: number) => {
+  let coordinateIndex = 0;
+  return value.replace(/-?\d*\.?\d+(?:e[-+]?\d+)?/gi, (match) => {
+    const nextValue = Number(match) + (coordinateIndex % 2 === 0 ? dx : dy);
+    coordinateIndex += 1;
+    return formatSvgNumber(nextValue);
+  });
+};
+
+const translatePoints = (value: string, dx: number, dy: number) => {
+  let coordinateIndex = 0;
+  return value.replace(/-?\d*\.?\d+(?:e[-+]?\d+)?/gi, (match) => {
+    const nextValue = Number(match) + (coordinateIndex % 2 === 0 ? dx : dy);
+    coordinateIndex += 1;
+    return formatSvgNumber(nextValue);
+  });
+};
+
+const transformCoordinatePairs = (
+  value: string,
+  transform: (point: { x: number; y: number }) => { x: number; y: number },
+) => {
+  const numbers = value.match(/-?\d*\.?\d+(?:e[-+]?\d+)?/gi);
+  if (!numbers) return value;
+
+  let coordinateIndex = 0;
+  return value.replace(/-?\d*\.?\d+(?:e[-+]?\d+)?/gi, (match) => {
+    const pairIndex = Math.floor(coordinateIndex / 2) * 2;
+    const x = Number(numbers[pairIndex]);
+    const y = Number(numbers[pairIndex + 1]);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) {
+      coordinateIndex += 1;
+      return match;
+    }
+
+    const nextPoint = transform({ x, y });
+    const nextValue = coordinateIndex % 2 === 0 ? nextPoint.x : nextPoint.y;
+    coordinateIndex += 1;
+    return formatSvgNumber(nextValue);
+  });
+};
+
+const updateSvgElementByCoordinates = (
+  elementId: string,
+  change: { dx?: number; dy?: number; scale?: number; center?: { x: number; y: number } },
+  source = editorOption.editValue,
+) => {
+  if (!elementId.startsWith("node:")) return;
+
+  const rawContent = removeXmlns(getEditorContent(source));
+  const doc = new DOMParser().parseFromString(`<svg>${rawContent}</svg>`, "image/svg+xml");
+  const svg = doc.querySelector("svg");
+  if (!svg || doc.querySelector("parsererror")) return;
+
+  const target = Array.from(svg.querySelectorAll(editableSelector))[Number(elementId.replace("node:", ""))];
+  if (!target) return;
+
+  const tagName = target.tagName.toLowerCase();
+  const dx = change.dx || 0;
+  const dy = change.dy || 0;
+  const scale = change.scale || 1;
+  const center = change.center || { x: 0, y: 0 };
+  const scaleNumberAttr = (name: string) => {
+    const current = Number(target.getAttribute(name) || 0);
+    target.setAttribute(name, formatSvgNumber(center.x + (current - center.x) * scale));
+  };
+  const scaleVerticalNumberAttr = (name: string) => {
+    const current = Number(target.getAttribute(name) || 0);
+    target.setAttribute(name, formatSvgNumber(center.y + (current - center.y) * scale));
+  };
+  const moveTarget = (node: Element) => {
+    const nodeTagName = node.tagName.toLowerCase();
+    const addAttr = (name: string, delta: number) => {
+      const current = Number(node.getAttribute(name) || 0);
+      node.setAttribute(name, formatSvgNumber(current + delta));
+    };
+
+    if (["rect", "image", "text", "use"].includes(nodeTagName)) {
+      addAttr("x", dx);
+      addAttr("y", dy);
+    } else if (["circle", "ellipse"].includes(nodeTagName)) {
+      addAttr("cx", dx);
+      addAttr("cy", dy);
+    } else if (nodeTagName === "line") {
+      addAttr("x1", dx);
+      addAttr("y1", dy);
+      addAttr("x2", dx);
+      addAttr("y2", dy);
+    } else if (["polyline", "polygon"].includes(nodeTagName)) {
+      node.setAttribute("points", translatePoints(node.getAttribute("points") || "", dx, dy));
+    } else if (nodeTagName === "path") {
+      node.setAttribute("d", translatePathData(node.getAttribute("d") || "", dx, dy));
+    } else if (nodeTagName === "g") {
+      Array.from(node.querySelectorAll(editableSelector)).forEach(moveTarget);
+    }
+  };
+
+  if (activeElementEdit.mode === "move") {
+    moveTarget(target);
+  } else if (activeElementEdit.mode === "scale" && ["rect", "image", "use"].includes(tagName)) {
+    scaleNumberAttr("x");
+    scaleVerticalNumberAttr("y");
+    target.setAttribute("width", formatSvgNumber(Number(target.getAttribute("width") || 0) * scale));
+    target.setAttribute("height", formatSvgNumber(Number(target.getAttribute("height") || 0) * scale));
+  } else if (activeElementEdit.mode === "scale" && tagName === "circle") {
+    scaleNumberAttr("cx");
+    scaleVerticalNumberAttr("cy");
+    target.setAttribute("r", formatSvgNumber(Number(target.getAttribute("r") || 0) * scale));
+  } else if (activeElementEdit.mode === "scale" && tagName === "ellipse") {
+    scaleNumberAttr("cx");
+    scaleVerticalNumberAttr("cy");
+    target.setAttribute("rx", formatSvgNumber(Number(target.getAttribute("rx") || 0) * scale));
+    target.setAttribute("ry", formatSvgNumber(Number(target.getAttribute("ry") || 0) * scale));
+  } else if (activeElementEdit.mode === "scale" && tagName === "line") {
+    scaleNumberAttr("x1");
+    scaleVerticalNumberAttr("y1");
+    scaleNumberAttr("x2");
+    scaleVerticalNumberAttr("y2");
+  } else if (activeElementEdit.mode === "scale" && ["polyline", "polygon"].includes(tagName)) {
+    target.setAttribute(
+      "points",
+      transformCoordinatePairs(target.getAttribute("points") || "", ({ x, y }) => ({
+        x: center.x + (x - center.x) * scale,
+        y: center.y + (y - center.y) * scale,
+      })),
+    );
+  } else if (activeElementEdit.mode === "scale" && tagName === "path") {
+    target.setAttribute(
+      "d",
+      transformCoordinatePairs(target.getAttribute("d") || "", ({ x, y }) => ({
+        x: center.x + (x - center.x) * scale,
+        y: center.y + (y - center.y) * scale,
+      })),
+    );
+  }
+
+  editorOption.editValue = formatXml(
+    Array.from(svg.childNodes)
+      .map((node) => new XMLSerializer().serializeToString(node))
+      .join("\n")
+      .trim(),
+  );
+};
+
+const startElementEdit = (mode: "move" | "scale" | "rotate", event: PointerEvent, element: SVGGraphicsElement) => {
+  const point = getSvgPoint(element, event.clientX, event.clientY);
+  if (!point) return;
+
+  const centerPoint = getElementCenterPoint(element);
+  activeElementEdit.mode = mode;
+  activeElementEdit.elementId = element.dataset.svgEditId || "";
+  activeElementEdit.startPoint = point;
+  activeElementEdit.centerPoint = centerPoint;
+  activeElementEdit.terminalStartPoint = {
+    x: Number(element.getAttribute("cx")) || centerPoint.x,
+    y: Number(element.getAttribute("cy")) || centerPoint.y,
+  };
+  activeElementEdit.startDistance = Math.max(Math.hypot(point.x - centerPoint.x, point.y - centerPoint.y), 0.1);
+  activeElementEdit.startAngle = Math.atan2(point.y - centerPoint.y, point.x - centerPoint.x);
+  activeElementEdit.startMatrix = new DOMMatrix();
+  activeElementEdit.startContent = editorOption.editValue;
+};
+
+const selectElement = (element: SVGGraphicsElement) => {
+  selectedSvgElementId.value = element.dataset.svgEditId || "";
+  selectedElementName.value = element.dataset.svgEditKind || element.tagName.toLowerCase();
+  updateSelectionBox();
+};
+
+const stopElementEdit = () => {
+  activeElementEdit.mode = "";
+  activeElementEdit.elementId = "";
+  activeElementEdit.startMatrix = null;
+  activeElementEdit.startContent = "";
+};
 
 const syncEditorContent = () => {
   editorOption.editValue = formatXml(getEditorContent(editorOption.editValue));
@@ -298,12 +690,14 @@ const zoomPreview = (delta: number) => {
   previewScale.value = nextClampedScale;
   previewOffset.x = anchor.x - svgPointX * nextClampedScale;
   previewOffset.y = anchor.y - svgPointY * nextClampedScale;
+  scheduleSelectionBoxUpdate();
 };
 
 const resetPreviewTransform = () => {
   previewScale.value = 1;
   previewOffset.x = 0;
   previewOffset.y = 0;
+  scheduleSelectionBoxUpdate();
 };
 
 const handlePreviewWheel = (event: WheelEvent) => {
@@ -319,10 +713,13 @@ const handlePreviewWheel = (event: WheelEvent) => {
   previewScale.value = nextClampedScale;
   previewOffset.x = anchor.x - svgPointX * nextClampedScale;
   previewOffset.y = anchor.y - svgPointY * nextClampedScale;
+  scheduleSelectionBoxUpdate();
 };
 
 const startPan = (event: PointerEvent) => {
   if (event.button !== 0) return;
+  selectedSvgElementId.value = "";
+  selectionBox.visible = false;
   isPanning.value = true;
   lastPanPoint.x = event.clientX;
   lastPanPoint.y = event.clientY;
@@ -330,6 +727,90 @@ const startPan = (event: PointerEvent) => {
 
 const stopPan = () => {
   isPanning.value = false;
+};
+
+const getEditableTarget = (event: PointerEvent) => {
+  const target = event.target instanceof Element ? event.target.closest<SVGGraphicsElement>("[data-svg-edit-id]") : null;
+  if (!target || !previewCanvasRef.value?.contains(target)) return null;
+  return target;
+};
+
+const handlePreviewPointerDown = (event: PointerEvent) => {
+  if (event.button !== 0) return;
+
+  const handle = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-svg-edit-handle]") : null;
+  if (handle) {
+    const selectedElement = getSelectedPreviewElement();
+    if (!selectedElement) return;
+    event.preventDefault();
+    event.stopPropagation();
+    startElementEdit(handle.dataset.svgEditHandle as "scale" | "rotate", event, selectedElement);
+    return;
+  }
+
+  const editableTarget = getEditableTarget(event);
+  if (editableTarget) {
+    event.preventDefault();
+    event.stopPropagation();
+    selectElement(editableTarget);
+    startElementEdit("move", event, editableTarget);
+    return;
+  }
+
+  startPan(event);
+};
+
+const updateElementEdit = (event: PointerEvent) => {
+  const selectedElement = getSelectedPreviewElement();
+  if (!selectedElement || !activeElementEdit.startMatrix) return;
+
+  const point = getSvgPoint(selectedElement, event.clientX, event.clientY);
+  if (!point) return;
+
+  if (activeElementEdit.elementId.startsWith("terminal:")) {
+    if (activeElementEdit.mode !== "move") return;
+
+    updateTerminalPosition(
+      activeElementEdit.elementId,
+      activeElementEdit.terminalStartPoint.x + point.x - activeElementEdit.startPoint.x,
+      activeElementEdit.terminalStartPoint.y + point.y - activeElementEdit.startPoint.y,
+      activeElementEdit.startContent,
+    );
+    scheduleSelectionBoxUpdate();
+    return;
+  }
+
+  if (activeElementEdit.mode === "move") {
+    updateSvgElementByCoordinates(
+      activeElementEdit.elementId,
+      {
+        dx: point.x - activeElementEdit.startPoint.x,
+        dy: point.y - activeElementEdit.startPoint.y,
+      },
+      activeElementEdit.startContent,
+    );
+    scheduleSelectionBoxUpdate();
+    return;
+  }
+
+  if (activeElementEdit.mode === "scale") {
+    const distance = Math.max(
+      Math.hypot(point.x - activeElementEdit.centerPoint.x, point.y - activeElementEdit.centerPoint.y),
+      0.1,
+    );
+    updateSvgElementByCoordinates(
+      activeElementEdit.elementId,
+      {
+        scale: Math.max(distance / activeElementEdit.startDistance, 0.05),
+        center: activeElementEdit.centerPoint,
+      },
+      activeElementEdit.startContent,
+    );
+    scheduleSelectionBoxUpdate();
+    return;
+  }
+
+  scheduleSelectionBoxUpdate();
 };
 
 const updateSplit = (clientX: number) => {
@@ -378,6 +859,11 @@ watch(viewBoxText, (value) => {
 watch(previewRatio, (value) => writeLocal(storageKeys.split, String(Math.round(value * 100) / 100)));
 
 useEventListener(window, "pointermove", (event) => {
+  if (activeElementEdit.mode) {
+    updateElementEdit(event);
+    return;
+  }
+
   if (!isDragging.value) return;
   updateSplit(event.clientX);
 });
@@ -388,16 +874,21 @@ useEventListener(window, "pointermove", (event) => {
   previewOffset.y += event.clientY - lastPanPoint.y;
   lastPanPoint.x = event.clientX;
   lastPanPoint.y = event.clientY;
+  scheduleSelectionBoxUpdate();
 });
 
 useEventListener(window, "pointerup", () => {
+  stopElementEdit();
   stopResize();
   stopPan();
 });
 useEventListener(window, "blur", () => {
+  stopElementEdit();
   stopResize();
   stopPan();
 });
+
+watch(previewSvg, scheduleSelectionBoxUpdate);
 </script>
 
 <template>
@@ -447,15 +938,35 @@ useEventListener(window, "blur", () => {
             <small>{{ previewViewBox }}</small>
           </div>
           <div class="preview-tools">
+            <span v-if="hasSelectedElement" class="selected-element-name">
+              <el-icon><EditPen /></el-icon>
+              {{ selectedElementName }}
+            </span>
             <span>{{ Math.round(previewScale * 100) }}%</span>
             <el-button :icon="ZoomOut" text circle size="small" @click="zoomPreview(-0.1)" />
             <el-button :icon="ZoomIn" text circle size="small" @click="zoomPreview(0.1)" />
             <el-button :icon="Refresh" text circle size="small" @click="resetPreviewTransform" />
-            <el-icon><View /></el-icon>
           </div>
         </div>
-        <div ref="previewContentRef" class="svg-content" @wheel.prevent="handlePreviewWheel" @pointerdown="startPan">
+        <div ref="previewContentRef" class="svg-content" @wheel.prevent="handlePreviewWheel" @pointerdown="handlePreviewPointerDown">
           <div ref="previewCanvasRef" class="svg-canvas" :style="previewCanvasStyle" v-html="previewSvg"></div>
+          <div v-if="previewError" class="svg-preview-error">
+            <strong>SVG 预览失败</strong>
+            <span>{{ previewError }}</span>
+          </div>
+          <div
+            v-if="hasSelectedElement"
+            class="svg-selection-box"
+            :style="{
+              left: `${selectionBox.left}px`,
+              top: `${selectionBox.top}px`,
+              width: `${selectionBox.width}px`,
+              height: `${selectionBox.height}px`,
+            }">
+            <template v-if="!isSelectedTerminal">
+              <span class="svg-selection-handle scale-handle" data-svg-edit-handle="scale"></span>
+            </template>
+          </div>
         </div>
       </section>
     </div>
@@ -609,6 +1120,23 @@ useEventListener(window, "blur", () => {
   }
 }
 
+.selected-element-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: auto;
+  min-width: 0 !important;
+  max-width: 112px;
+  padding: 2px 7px;
+  border: 1px solid rgba(71, 135, 240, 0.2);
+  border-radius: 999px;
+  overflow: hidden;
+  color: var(--yh-brand-color) !important;
+  background: rgba(71, 135, 240, 0.1);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .svg-preview-resizer {
   width: 12px;
   min-width: 12px;
@@ -669,6 +1197,69 @@ useEventListener(window, "blur", () => {
   user-select: none;
 }
 
+.svg-selection-box {
+  position: absolute;
+  z-index: 2;
+  box-sizing: border-box;
+  border: 1px solid var(--yh-brand-color);
+  background: rgba(71, 135, 240, 0.06);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.84),
+    0 10px 24px rgba(15, 23, 42, 0.12);
+  pointer-events: none;
+}
+
+.svg-preview-error {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 34%;
+  padding: 10px 12px;
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  border-radius: 8px;
+  overflow: auto;
+  color: #991b1b;
+  background: rgba(254, 242, 242, 0.94);
+  box-shadow: 0 16px 36px rgba(127, 29, 29, 0.14);
+  pointer-events: auto;
+
+  strong {
+    font-size: 13px;
+    line-height: 1.2;
+  }
+
+  span {
+    font-size: 12px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+}
+
+.svg-selection-handle {
+  position: absolute;
+  z-index: 3;
+  box-sizing: border-box;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--yh-brand-color);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18);
+  pointer-events: auto;
+}
+
+.scale-handle {
+  right: -6px;
+  bottom: -6px;
+  cursor: nwse-resize;
+}
+
 .svg-canvas {
   position: absolute;
   left: 5%;
@@ -683,6 +1274,14 @@ useEventListener(window, "blur", () => {
     width: 100%;
     height: 100%;
     overflow: visible;
+  }
+
+  :deep([data-svg-edit-id]) {
+    cursor: move;
+  }
+
+  :deep([data-svg-edit-id]:hover) {
+    filter: drop-shadow(0 0 3px rgba(71, 135, 240, 0.45));
   }
 }
 
