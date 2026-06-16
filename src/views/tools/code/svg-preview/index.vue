@@ -24,6 +24,16 @@ const exampleSvg = `<svg viewBox="0 0 120 120">
   <path d="M31 88H90" stroke="#0f172a" stroke-width="5" stroke-linecap="round"/>
 </svg>`;
 
+/**
+ * SVG 预览编辑页约定：
+ * 1. Monaco 只编辑 SVG 子元素，完整 <svg> 由当前 viewBox 动态包裹生成。
+ * 2. 粘贴完整 SVG 时会抽取 viewBox 到工具栏，并把子元素回填到编辑器，避免两处 viewBox 不同步。
+ * 3. 预览缩放使用 `.svg-content` 作为稳定坐标系，`.svg-canvas` 绝对定位在其中。
+ *    transform 状态只保存 scale 和 offset，滚轮时用鼠标在 canvas 内的坐标反算新 offset，
+ *    保证鼠标下的 SVG 点在缩放前后保持不动。
+ * 4. SVG 内容、viewBox 和左右分栏比例都写入 localStorage，刷新后恢复上次编辑状态。
+ */
+
 const readLocal = (key: string, fallback: string) => {
   try {
     return localStorage.getItem(key) || fallback;
@@ -36,7 +46,6 @@ const writeLocal = (key: string, value: string) => {
   try {
     localStorage.setItem(key, value);
   } catch {
-    // 隐私模式或受限环境下 localStorage 可能不可用。
   }
 };
 
@@ -57,7 +66,9 @@ const normalizeViewBoxText = (source: string) => {
   return values.join(",");
 };
 
-// 兼容完整 <svg> 和内部元素输入，编辑器最终只保留内部元素。
+/**
+ * 拆解用户输入，兼容完整 <svg> 和 SVG 子元素两种输入方式。
+ */
 const extractSvgParts = (source: string) => {
   const cleanedSource = removeXmlns(source.trim());
   if (!cleanedSource || typeof DOMParser === "undefined") {
@@ -144,6 +155,8 @@ const editorOption = reactive<any>({
 
 const viewBoxText = ref(initialViewBox);
 const workbenchRef = ref<HTMLElement | null>(null);
+const previewContentRef = ref<HTMLElement | null>(null);
+const previewCanvasRef = ref<HTMLElement | null>(null);
 const previewRatio = ref(clampSplit(Number(readLocal(storageKeys.split, "48")) || 48));
 const isDragging = ref(false);
 const isPanning = ref(false);
@@ -156,20 +169,36 @@ const splitGridStyle = computed(() => ({
 }));
 
 const previewCanvasStyle = computed(() => ({
-  transform: `translate(${previewOffset.x}px, ${previewOffset.y}px) scale(${previewScale.value})`,
+  transform: `matrix(${previewScale.value}, 0, 0, ${previewScale.value}, ${previewOffset.x}, ${previewOffset.y})`,
 }));
+
+/**
+ * 返回鼠标在未缩放 canvas 内的坐标。
+ * canvas 使用绝对定位，offsetLeft/offsetTop 是缩放数学的固定基准。
+ */
+const getCanvasAnchorPoint = (clientX: number, clientY: number) => {
+  const contentRect = previewContentRef.value?.getBoundingClientRect();
+  const canvas = previewCanvasRef.value;
+  if (!contentRect || !canvas) return null;
+
+  return {
+    x: clientX - contentRect.left - canvas.offsetLeft,
+    y: clientY - contentRect.top - canvas.offsetTop,
+  };
+};
 
 const parsedViewBox = computed(() => normalizeViewBoxText(viewBoxText.value).split(","));
 const previewViewBox = computed(() => parsedViewBox.value.join(" "));
 
-// 编辑器只存内部元素，预览和复制时再按当前 viewBox 包成完整 SVG。
 const buildSvgSource = (innerSource = editorOption.editValue) => {
   const content = removeXmlns(getEditorContent(innerSource));
   if (!content.trim()) return "";
   return `<svg viewBox="${previewViewBox.value}">\n${content.trim()}\n</svg>`;
 };
 
-// 预览前过滤高风险节点和事件属性，只渲染安全的 SVG 子集。
+/**
+ * 预览使用 v-html 渲染，因此渲染前需要移除脚本、foreignObject 和事件属性。
+ */
 const sanitizeSvg = (source: string) => {
   if (!source || typeof DOMParser === "undefined") return "";
 
@@ -219,9 +248,19 @@ const resetExample = () => {
   editorOption.editValue = formatXml(parts.inner);
 };
 
-// VueUse 有拖拽基础工具，但没有完整缩放平移组合，这里保留显式的 transform 状态。
 const zoomPreview = (delta: number) => {
-  previewScale.value = clampScale(Math.round((previewScale.value + delta) * 100) / 100);
+  const currentScale = previewScale.value;
+  const nextClampedScale = clampScale(Math.round((currentScale + delta) * 100) / 100);
+  const anchor = {
+    x: (previewCanvasRef.value?.offsetWidth || 0) / 2,
+    y: (previewCanvasRef.value?.offsetHeight || 0) / 2,
+  };
+  const svgPointX = (anchor.x - previewOffset.x) / currentScale;
+  const svgPointY = (anchor.y - previewOffset.y) / currentScale;
+
+  previewScale.value = nextClampedScale;
+  previewOffset.x = anchor.x - svgPointX * nextClampedScale;
+  previewOffset.y = anchor.y - svgPointY * nextClampedScale;
 };
 
 const resetPreviewTransform = () => {
@@ -231,11 +270,20 @@ const resetPreviewTransform = () => {
 };
 
 const handlePreviewWheel = (event: WheelEvent) => {
+  const anchor = getCanvasAnchorPoint(event.clientX, event.clientY);
+  if (!anchor) return;
+
+  const currentScale = previewScale.value;
   const nextScale = previewScale.value * (event.deltaY > 0 ? 0.9 : 1.1);
-  previewScale.value = clampScale(Math.round(nextScale * 100) / 100);
+  const nextClampedScale = clampScale(Math.round(nextScale * 100) / 100);
+  const svgPointX = (anchor.x - previewOffset.x) / currentScale;
+  const svgPointY = (anchor.y - previewOffset.y) / currentScale;
+
+  previewScale.value = nextClampedScale;
+  previewOffset.x = anchor.x - svgPointX * nextClampedScale;
+  previewOffset.y = anchor.y - svgPointY * nextClampedScale;
 };
 
-// 在 window 上监听移动，鼠标拖出预览面板后仍能保持平移流畅。
 const startPan = (event: PointerEvent) => {
   if (event.button !== 0) return;
   isPanning.value = true;
@@ -276,7 +324,6 @@ watch(
     if (parts.viewBox) {
       viewBoxText.value = normalizeViewBoxText(parts.viewBox);
     }
-    // 粘贴完整 SVG 时，把 viewBox 移到工具栏，Monaco 里只保留子元素。
     if (/^\s*<svg[\s>]/i.test(value)) {
       editorOption.editValue = formatXml(parts.inner);
       return;
@@ -323,40 +370,19 @@ useEventListener(window, "blur", () => {
         <span>SVG 预览编辑</span>
         <small>实时保存 · 内联预览 · 支持缩放平移 · 支持拖拽分栏</small>
       </div>
+      <div class="svg-preview-actions">
+        <el-button type="primary" :icon="Brush" size="small" @click="formatSvg">格式化</el-button>
+        <el-button :icon="CopyDocument" size="small" @click="copySvg">复制完整 SVG</el-button>
+        <el-button :icon="Refresh" size="small" @click="resetExample">示例</el-button>
+        <el-button :icon="Delete" size="small" @click="clearSvg">清空</el-button>
+      </div>
       <label class="svg-preview-viewbox">
         <span>viewBox</span>
         <el-input v-model="viewBoxText" placeholder="0,0,10,20" size="small" />
       </label>
-      <div class="svg-preview-actions">
-        <el-button type="primary" :icon="Brush" @click="formatSvg">格式化</el-button>
-        <el-button :icon="CopyDocument" @click="copySvg">复制完整 SVG</el-button>
-        <el-button :icon="Refresh" @click="resetExample">示例</el-button>
-        <el-button :icon="Delete" @click="clearSvg">清空</el-button>
-      </div>
     </div>
 
     <div ref="workbenchRef" class="svg-preview-workbench" :style="splitGridStyle">
-      <section class="svg-preview-panel svg-preview-result">
-        <div class="svg-preview-panel-header preview-header">
-          <div>
-            <span>预览</span>
-            <small>{{ previewViewBox }}</small>
-          </div>
-          <div class="preview-tools">
-            <span>{{ Math.round(previewScale * 100) }}%</span>
-            <el-button :icon="ZoomOut" text circle size="small" @click="zoomPreview(-0.1)" />
-            <el-button :icon="ZoomIn" text circle size="small" @click="zoomPreview(0.1)" />
-            <el-button :icon="Refresh" text circle size="small" @click="resetPreviewTransform" />
-            <el-icon><View /></el-icon>
-          </div>
-        </div>
-        <div class="svg-content" @wheel.prevent="handlePreviewWheel" @pointerdown="startPan">
-          <div class="svg-canvas" :style="previewCanvasStyle" v-html="previewSvg"></div>
-        </div>
-      </section>
-      <button class="svg-preview-resizer" type="button" aria-label="调整预览和代码宽度" @pointerdown="startResize">
-        <span></span>
-      </button>
       <section class="svg-preview-panel svg-preview-editor">
         <div class="svg-preview-panel-header">
           <div>
@@ -374,6 +400,27 @@ useEventListener(window, "blur", () => {
           @save="formatSvg"
           class="svg-preview-monaco" />
       </section>
+      <button class="svg-preview-resizer" type="button" aria-label="调整代码和预览宽度" @pointerdown="startResize">
+        <span></span>
+      </button>
+      <section class="svg-preview-panel svg-preview-result">
+        <div class="svg-preview-panel-header preview-header">
+          <div>
+            <span>预览</span>
+            <small>{{ previewViewBox }}</small>
+          </div>
+          <div class="preview-tools">
+            <span>{{ Math.round(previewScale * 100) }}%</span>
+            <el-button :icon="ZoomOut" text circle size="small" @click="zoomPreview(-0.1)" />
+            <el-button :icon="ZoomIn" text circle size="small" @click="zoomPreview(0.1)" />
+            <el-button :icon="Refresh" text circle size="small" @click="resetPreviewTransform" />
+            <el-icon><View /></el-icon>
+          </div>
+        </div>
+        <div ref="previewContentRef" class="svg-content" @wheel.prevent="handlePreviewWheel" @pointerdown="startPan">
+          <div ref="previewCanvasRef" class="svg-canvas" :style="previewCanvasStyle" v-html="previewSvg"></div>
+        </div>
+      </section>
     </div>
   </div>
 </template>
@@ -381,12 +428,11 @@ useEventListener(window, "blur", () => {
 <style scoped lang="scss">
 .svg-preview-page {
   width: 100%;
-  max-width: none;
+  max-width: 100%;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   margin: 0;
-  padding: 12px;
   overflow: hidden;
   background:
     radial-gradient(circle at 14% 0, rgba(71, 135, 240, 0.14), transparent 26%),
@@ -397,12 +443,12 @@ useEventListener(window, "blur", () => {
 
 .svg-preview-toolbar {
   display: grid;
-  grid-template-columns: minmax(240px, 1fr) auto minmax(280px, 1fr);
+  grid-template-columns: minmax(220px, 1fr) minmax(320px, auto) auto;
   align-items: center;
-  gap: 12px;
-  min-height: 48px;
-  margin-bottom: 12px;
-  padding: 10px 12px;
+  gap: 10px;
+  min-height: 42px;
+  margin-bottom: 8px;
+  padding: 8px 10px;
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.72);
@@ -417,7 +463,7 @@ useEventListener(window, "blur", () => {
   min-width: 0;
 
   span {
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 900;
     line-height: 1.2;
   }
@@ -430,10 +476,11 @@ useEventListener(window, "blur", () => {
 }
 
 .svg-preview-viewbox {
+  justify-self: end;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 8px;
+  padding: 4px 8px;
   border: 1px solid var(--yh-border-level-1-color);
   border-radius: 6px;
   background: var(--yh-bg-color-container);
@@ -458,7 +505,8 @@ useEventListener(window, "blur", () => {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  justify-content: flex-end;
+  justify-content: center;
+  min-width: 0;
 
   :deep(.el-button + .el-button) {
     margin-left: 0;
@@ -468,9 +516,8 @@ useEventListener(window, "blur", () => {
 .svg-preview-workbench {
   display: grid;
   gap: 0;
-  flex: 1;
+  flex: 1 1 0;
   min-height: 0;
-  height: 100%;
   overflow: hidden;
 }
 
@@ -569,8 +616,7 @@ useEventListener(window, "blur", () => {
   width: 100%;
   height: calc(100% - 39px);
   flex: 1;
-  display: grid;
-  place-items: center;
+  position: relative;
   overflow: hidden;
   border-top: 1px solid rgba(148, 163, 184, 0.16);
   background:
@@ -587,11 +633,14 @@ useEventListener(window, "blur", () => {
 }
 
 .svg-canvas {
+  position: absolute;
+  left: 5%;
+  top: 5%;
   display: grid;
   place-items: center;
-  width: 86%;
-  height: 86%;
-  transform-origin: center center;
+  width: 90%;
+  height: 90%;
+  transform-origin: 0 0;
 
   :deep(svg) {
     width: 100%;
@@ -623,10 +672,6 @@ useEventListener(window, "blur", () => {
 }
 
 @media (max-width: 900px) {
-  .svg-preview-page {
-    padding: 8px;
-  }
-
   .svg-preview-toolbar {
     grid-template-columns: 1fr;
     align-items: flex-start;
