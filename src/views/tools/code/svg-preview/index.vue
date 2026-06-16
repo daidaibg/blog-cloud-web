@@ -31,7 +31,8 @@ const exampleSvg = `<svg viewBox="0 0 120 120">
  * 3. 预览缩放使用 `.svg-content` 作为稳定坐标系，`.svg-canvas` 绝对定位在其中。
  *    transform 状态只保存 scale 和 offset，滚轮时用鼠标在 canvas 内的坐标反算新 offset，
  *    保证鼠标下的 SVG 点在缩放前后保持不动。
- * 4. SVG 内容、viewBox 和左右分栏比例都写入 localStorage，刷新后恢复上次编辑状态。
+ * 4. TerminalPosition 是业务自定义节点，SVG 不会直接渲染它；预览和复制时会转成主题色圆点追加到 SVG 末尾。
+ * 5. SVG 内容、viewBox 和左右分栏比例都写入 localStorage，刷新后恢复上次编辑状态。
  */
 
 const readLocal = (key: string, fallback: string) => {
@@ -190,8 +191,44 @@ const getCanvasAnchorPoint = (clientX: number, clientY: number) => {
 const parsedViewBox = computed(() => normalizeViewBoxText(viewBoxText.value).split(","));
 const previewViewBox = computed(() => parsedViewBox.value.join(" "));
 
-const buildSvgSource = (innerSource = editorOption.editValue) => {
-  const content = removeXmlns(getEditorContent(innerSource));
+const parseTagAttributes = (source: string) => {
+  const attrs: Record<string, string | true> = {};
+  const attrPattern = /([:\w-]+)(?:=(?:"([^"]*)"|'([^']*)'|([^\s"'>/]+)))?/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = attrPattern.exec(source))) {
+    attrs[match[1]] = match[2] ?? match[3] ?? match[4] ?? true;
+  }
+
+  return attrs;
+};
+
+/**
+ * TerminalPosition 不是标准 SVG 节点，浏览器不会把它画出来。
+ * 预览渲染时将它替换为圆点，并追加到内容末尾，保证端子点显示在其它图形上方。
+ */
+const renderTerminalPositions = (source: string) => {
+  const terminalDots: string[] = [];
+  const terminalPattern = /<TerminalPosition\b([^>]*)\/>|<TerminalPosition\b([^>]*)>\s*<\/TerminalPosition>/gi;
+
+  const content = source.replace(terminalPattern, (_, selfClosingAttrs = "", pairedAttrs = "") => {
+    const attrs = parseTagAttributes(selfClosingAttrs || pairedAttrs);
+    const x = Number(attrs.x);
+    const y = Number(attrs.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return "";
+
+    terminalDots.push(
+      `<circle cx="${x}" cy="${y}" r="0.5" fill="#fff" stroke="var(--yh-brand-color)" stroke-width="0.25"/>`,
+    );
+    return "";
+  });
+
+  return [content.trim(), ...terminalDots].filter(Boolean).join("\n");
+};
+
+const buildSvgSource = (innerSource = editorOption.editValue, options: { renderTerminals?: boolean } = {}) => {
+  const rawContent = removeXmlns(getEditorContent(innerSource));
+  const content = options.renderTerminals ? renderTerminalPositions(rawContent) : rawContent;
   if (!content.trim()) return "";
   return `<svg viewBox="${previewViewBox.value}">\n${content.trim()}\n</svg>`;
 };
@@ -222,7 +259,7 @@ const sanitizeSvg = (source: string) => {
   return new XMLSerializer().serializeToString(svg);
 };
 
-const previewSvg = computed(() => sanitizeSvg(buildSvgSource()));
+const previewSvg = computed(() => sanitizeSvg(buildSvgSource(editorOption.editValue, { renderTerminals: true })));
 
 const syncEditorContent = () => {
   editorOption.editValue = formatXml(getEditorContent(editorOption.editValue));
@@ -234,7 +271,7 @@ const formatSvg = () => {
 };
 
 const copySvg = async () => {
-  await navigator.clipboard.writeText(formatXml(buildSvgSource()));
+  await navigator.clipboard.writeText(formatXml(buildSvgSource(editorOption.editValue, { renderTerminals: true })));
   ElMessage.success({ message: "已复制完整 SVG", plain: true });
 };
 
