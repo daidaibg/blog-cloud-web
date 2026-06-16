@@ -2,7 +2,7 @@
 import { computed, defineAsyncComponent, reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { Brush, CopyDocument, Delete, EditPen, Refresh, ZoomIn, ZoomOut } from "@element-plus/icons-vue";
-import { useEventListener } from "@vueuse/core";
+import { useElementSize, useEventListener } from "@vueuse/core";
 import Loading from "@/components/loading";
 
 const MonacoEditor = defineAsyncComponent({
@@ -171,13 +171,14 @@ const viewBoxText = ref(initialViewBox);
 const workbenchRef = ref<HTMLElement | null>(null);
 const previewContentRef = ref<HTMLElement | null>(null);
 const previewCanvasRef = ref<HTMLElement | null>(null);
+const { width: previewContentWidth, height: previewContentHeight } = useElementSize(previewContentRef);
 const previewRatio = ref(clampSplit(Number(readLocal(storageKeys.split, "48")) || 48));
 const isDragging = ref(false);
 const isPanning = ref(false);
 const previewScale = ref(1);
 const previewOffset = reactive({ x: 0, y: 0 });
 const lastPanPoint = reactive({ x: 0, y: 0 });
-const selectedSvgElementId = ref("");
+const selectedSvgElementIds = ref<string[]>([]);
 const selectedElementName = ref("");
 const selectionBox = reactive({
   left: 0,
@@ -187,25 +188,37 @@ const selectionBox = reactive({
   visible: false,
 });
 const activeElementEdit = reactive<{
-  mode: "" | "move" | "scale" | "rotate";
-  elementId: string;
+  mode: "" | "move";
+  elementIds: string[];
   startPoint: { x: number; y: number };
-  centerPoint: { x: number; y: number };
   terminalStartPoint: { x: number; y: number };
-  startDistance: number;
-  startAngle: number;
   startMatrix: DOMMatrix | null;
   startContent: string;
 }>({
   mode: "",
-  elementId: "",
+  elementIds: [],
   startPoint: { x: 0, y: 0 },
-  centerPoint: { x: 0, y: 0 },
   terminalStartPoint: { x: 0, y: 0 },
-  startDistance: 1,
-  startAngle: 0,
   startMatrix: null,
   startContent: "",
+});
+const contextMenu = reactive({
+  left: 0,
+  top: 0,
+  visible: false,
+});
+const transformPanel = reactive({
+  dragging: false,
+  dragOffsetX: 0,
+  dragOffsetY: 0,
+  left: 20,
+  mode: "scale" as "scale" | "move" | "rotate",
+  moveStepX: 1,
+  moveStepY: 1,
+  rotateStep: 15,
+  scaleStep: 10,
+  top: 20,
+  visible: false,
 });
 
 const splitGridStyle = computed(() => ({
@@ -213,8 +226,45 @@ const splitGridStyle = computed(() => ({
 }));
 
 const previewCanvasStyle = computed(() => ({
+  ...getViewBoxCanvasRect(),
   transform: `matrix(${previewScale.value}, 0, 0, ${previewScale.value}, ${previewOffset.x}, ${previewOffset.y})`,
+  "--svg-preview-scale": previewScale.value,
 }));
+
+const getViewBoxCanvasRect = () => {
+  const [, , viewBoxWidth, viewBoxHeight] = normalizeViewBoxText(viewBoxText.value)
+    .split(",")
+    .map(Number);
+  const ratio = viewBoxWidth > 0 && viewBoxHeight > 0 ? viewBoxWidth / viewBoxHeight : 1;
+  const containerWidth = previewContentWidth.value;
+  const containerHeight = previewContentHeight.value;
+
+  if (!containerWidth || !containerHeight) {
+    return {
+      aspectRatio: `${viewBoxWidth || 1} / ${viewBoxHeight || 1}`,
+      height: "90%",
+      left: "5%",
+      top: "5%",
+      width: "90%",
+    };
+  }
+
+  let width = containerWidth * 0.96;
+  let height = width / ratio;
+  const maxHeight = containerHeight * 0.96;
+  if (height > maxHeight) {
+    height = maxHeight;
+    width = height * ratio;
+  }
+
+  return {
+    aspectRatio: `${viewBoxWidth} / ${viewBoxHeight}`,
+    height: `${height}px`,
+    left: `${(containerWidth - width) / 2}px`,
+    top: `${(containerHeight - height) / 2}px`,
+    width: `${width}px`,
+  };
+};
 
 /**
  * 返回鼠标在未缩放 canvas 内的坐标。
@@ -233,8 +283,7 @@ const getCanvasAnchorPoint = (clientX: number, clientY: number) => {
 
 const parsedViewBox = computed(() => normalizeViewBoxText(viewBoxText.value).split(","));
 const previewViewBox = computed(() => parsedViewBox.value.join(" "));
-const hasSelectedElement = computed(() => Boolean(selectedSvgElementId.value && selectionBox.visible));
-const isSelectedTerminal = computed(() => selectedSvgElementId.value.startsWith("terminal:"));
+const hasSelectedElement = computed(() => Boolean(selectedSvgElementIds.value.length && selectionBox.visible));
 
 const parseTagAttributes = (source: string) => {
   const attrs: Record<string, string | true> = {};
@@ -361,37 +410,39 @@ const previewResult = computed(() => sanitizeSvg(buildSvgSource(editorOption.edi
 const previewSvg = computed(() => previewResult.value.svg);
 const previewError = computed(() => previewResult.value.error);
 
-const getSelectedPreviewElement = () => {
-  if (!selectedSvgElementId.value) return null;
-  return (
-    previewCanvasRef.value?.querySelector<SVGGraphicsElement>(`[data-svg-edit-id="${selectedSvgElementId.value}"]`) ||
-    null
-  );
-};
+const getSelectedPreviewElements = () =>
+  selectedSvgElementIds.value
+    .map((id) => previewCanvasRef.value?.querySelector<SVGGraphicsElement>(`[data-svg-edit-id="${id}"]`) || null)
+    .filter((element): element is SVGGraphicsElement => Boolean(element));
+
+const getSelectedPreviewElement = () => getSelectedPreviewElements()[0] || null;
 
 const updateSelectionBox = () => {
   const contentRect = previewContentRef.value?.getBoundingClientRect();
-  const selectedElement = getSelectedPreviewElement();
-  if (!contentRect || !selectedElement) {
+  const selectedElements = getSelectedPreviewElements();
+  if (!contentRect || !selectedElements.length) {
     selectionBox.visible = false;
     return;
   }
 
   try {
-    const box = selectedElement.getBBox();
-    const matrix = selectedElement.getScreenCTM();
-    if (!matrix) {
+    const corners = selectedElements.flatMap((selectedElement) => {
+      const box = selectedElement.getBBox();
+      const matrix = selectedElement.getScreenCTM();
+      if (!matrix) return [];
+
+      const padding = getSelectionPadding(selectedElement);
+      return [
+        new DOMPoint(box.x - padding, box.y - padding),
+        new DOMPoint(box.x + box.width + padding, box.y - padding),
+        new DOMPoint(box.x + box.width + padding, box.y + box.height + padding),
+        new DOMPoint(box.x - padding, box.y + box.height + padding),
+      ].map((point) => point.matrixTransform(matrix));
+    });
+    if (!corners.length) {
       selectionBox.visible = false;
       return;
     }
-
-    const padding = 0.5;
-    const corners = [
-      new DOMPoint(box.x - padding, box.y - padding),
-      new DOMPoint(box.x + box.width + padding, box.y - padding),
-      new DOMPoint(box.x + box.width + padding, box.y + box.height + padding),
-      new DOMPoint(box.x - padding, box.y + box.height + padding),
-    ].map((point) => point.matrixTransform(matrix));
     const left = Math.min(...corners.map((point) => point.x));
     const top = Math.min(...corners.map((point) => point.y));
     const right = Math.max(...corners.map((point) => point.x));
@@ -403,11 +454,15 @@ const updateSelectionBox = () => {
     selectionBox.height = Math.max(bottom - top, 1);
     selectionBox.visible = true;
   } catch {
-    const rect = selectedElement.getBoundingClientRect();
-    selectionBox.left = rect.left - contentRect.left;
-    selectionBox.top = rect.top - contentRect.top;
-    selectionBox.width = Math.max(rect.width, 1);
-    selectionBox.height = Math.max(rect.height, 1);
+    const rects = selectedElements.map((element) => element.getBoundingClientRect());
+    const left = Math.min(...rects.map((rect) => rect.left));
+    const top = Math.min(...rects.map((rect) => rect.top));
+    const right = Math.max(...rects.map((rect) => rect.right));
+    const bottom = Math.max(...rects.map((rect) => rect.bottom));
+    selectionBox.left = left - contentRect.left;
+    selectionBox.top = top - contentRect.top;
+    selectionBox.width = Math.max(right - left, 1);
+    selectionBox.height = Math.max(bottom - top, 1);
     selectionBox.visible = true;
   }
 };
@@ -431,15 +486,210 @@ const getSvgPoint = (element: SVGGraphicsElement, clientX: number, clientY: numb
   };
 };
 
-const getElementCenterPoint = (element: SVGGraphicsElement) => {
-  const box = element.getBBox();
-  const matrix = element.getCTM();
-  const center = new DOMPoint(box.x + box.width / 2, box.y + box.height / 2);
-  const point = matrix ? center.matrixTransform(matrix) : center;
-  return {
-    x: point.x,
-    y: point.y,
+const getSelectionPadding = (element: SVGGraphicsElement) => {
+  const readStrokeWidth = (node: Element) => {
+    const attrStrokeWidth = Number(node.getAttribute("stroke-width"));
+    if (Number.isFinite(attrStrokeWidth) && attrStrokeWidth > 0) return attrStrokeWidth / 2;
+
+    const computedStrokeWidth = Number.parseFloat(window.getComputedStyle(node).strokeWidth);
+    return Number.isFinite(computedStrokeWidth) && computedStrokeWidth > 0 ? computedStrokeWidth / 2 : 0;
   };
+
+  const nodeStrokeWidths = [element, ...Array.from(element.querySelectorAll("*"))].map((node) => readStrokeWidth(node) + 0.25);
+  return Math.max(0.5, ...nodeStrokeWidths);
+};
+
+const getSelectionSvgBounds = () => {
+  const points = getSelectedPreviewElements().flatMap((element) => {
+    try {
+      const box = element.getBBox();
+      const matrix = element.getCTM();
+      if (!matrix) return [];
+
+      return [
+        new DOMPoint(box.x, box.y),
+        new DOMPoint(box.x + box.width, box.y),
+        new DOMPoint(box.x + box.width, box.y + box.height),
+        new DOMPoint(box.x, box.y + box.height),
+      ].map((point) => point.matrixTransform(matrix));
+    } catch {
+      return [];
+    }
+  });
+
+  if (!points.length) return null;
+
+  const left = Math.min(...points.map((point) => point.x));
+  const top = Math.min(...points.map((point) => point.y));
+  const right = Math.max(...points.map((point) => point.x));
+  const bottom = Math.max(...points.map((point) => point.y));
+  return {
+    bottom,
+    height: bottom - top,
+    left,
+    right,
+    top,
+    width: right - left,
+  };
+};
+
+const getPointBounds = (points: Array<{ x: number; y: number }>) => {
+  const validPoints = points.filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
+  if (!validPoints.length) return null;
+
+  const left = Math.min(...validPoints.map((point) => point.x));
+  const top = Math.min(...validPoints.map((point) => point.y));
+  const right = Math.max(...validPoints.map((point) => point.x));
+  const bottom = Math.max(...validPoints.map((point) => point.y));
+  return {
+    bottom,
+    height: bottom - top,
+    left,
+    right,
+    top,
+    width: right - left,
+  };
+};
+
+const getNumericAttribute = (node: Element, name: string, fallback = 0) => {
+  const value = Number(node.getAttribute(name));
+  return Number.isFinite(value) ? value : fallback;
+};
+
+const getCoordinatePairPoints = (value: string) => {
+  const numbers = value.match(/-?\d*\.?\d+(?:e[-+]?\d+)?/gi)?.map(Number) || [];
+  const points: Array<{ x: number; y: number }> = [];
+
+  for (let index = 0; index < numbers.length - 1; index += 2) {
+    const x = numbers[index];
+    const y = numbers[index + 1];
+    if (Number.isFinite(x) && Number.isFinite(y)) points.push({ x, y });
+  }
+
+  return points;
+};
+
+const getElementCoordinatePoints = (node: Element): Array<{ x: number; y: number }> => {
+  const nodeTagName = node.tagName.toLowerCase();
+
+  if (["rect", "image", "use"].includes(nodeTagName)) {
+    const x = getNumericAttribute(node, "x");
+    const y = getNumericAttribute(node, "y");
+    const width = getNumericAttribute(node, "width");
+    const height = getNumericAttribute(node, "height");
+    return [
+      { x, y },
+      { x: x + width, y },
+      { x: x + width, y: y + height },
+      { x, y: y + height },
+    ];
+  }
+
+  if (nodeTagName === "text") {
+    return [{ x: getNumericAttribute(node, "x"), y: getNumericAttribute(node, "y") }];
+  }
+
+  if (nodeTagName === "circle") {
+    const cx = getNumericAttribute(node, "cx");
+    const cy = getNumericAttribute(node, "cy");
+    const r = getNumericAttribute(node, "r");
+    return [
+      { x: cx - r, y: cy - r },
+      { x: cx + r, y: cy + r },
+    ];
+  }
+
+  if (nodeTagName === "ellipse") {
+    const cx = getNumericAttribute(node, "cx");
+    const cy = getNumericAttribute(node, "cy");
+    const rx = getNumericAttribute(node, "rx");
+    const ry = getNumericAttribute(node, "ry");
+    return [
+      { x: cx - rx, y: cy - ry },
+      { x: cx + rx, y: cy + ry },
+    ];
+  }
+
+  if (nodeTagName === "line") {
+    return [
+      { x: getNumericAttribute(node, "x1"), y: getNumericAttribute(node, "y1") },
+      { x: getNumericAttribute(node, "x2"), y: getNumericAttribute(node, "y2") },
+    ];
+  }
+
+  if (["polyline", "polygon"].includes(nodeTagName)) {
+    return getCoordinatePairPoints(node.getAttribute("points") || "");
+  }
+
+  if (nodeTagName === "path") {
+    return getCoordinatePairPoints(node.getAttribute("d") || "");
+  }
+
+  if (nodeTagName === "g") {
+    return Array.from(node.querySelectorAll(editableSelector)).flatMap(getElementCoordinatePoints);
+  }
+
+  return [];
+};
+
+const getTerminalCoordinatePoints = (source: string, includedIds?: Set<string>, excludedIds?: Set<string>) => {
+  const points: Array<{ x: number; y: number }> = [];
+  const terminalPattern = /<TerminalPosition\b([^>]*)\/>|<TerminalPosition\b([^>]*)>\s*<\/TerminalPosition>/gi;
+  let terminalIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = terminalPattern.exec(source))) {
+    const elementId = `terminal:${terminalIndex}`;
+    const attrs = parseTagAttributes(match[1] || match[2] || "");
+    const x = Number(attrs.x);
+    const y = Number(attrs.y);
+    terminalIndex += 1;
+    if (includedIds && !includedIds.has(elementId)) continue;
+    if (excludedIds?.has(elementId)) continue;
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+
+    points.push(
+      { x: x - 0.5, y: y - 0.5 },
+      { x: x + 0.5, y: y + 0.5 },
+    );
+  }
+
+  return points;
+};
+
+const getSourceSvgBounds = (elementIds?: string[], excludedElementIds: string[] = []) => {
+  const rawSource = removeXmlns(getEditorContent(editorOption.editValue));
+  const includedIds = elementIds ? new Set(elementIds) : null;
+  const excludedIds = new Set(excludedElementIds);
+  const nodeIndexes = includedIds
+    ? new Set(
+        elementIds
+          .filter((elementId) => elementId.startsWith("node:"))
+          .map(getSvgElementIndex)
+          .filter((index) => Number.isFinite(index)),
+      )
+    : null;
+  const excludedNodeIndexes = new Set(
+    excludedElementIds
+      .filter((elementId) => elementId.startsWith("node:"))
+      .map(getSvgElementIndex)
+      .filter((index) => Number.isFinite(index)),
+  );
+  const points = getTerminalCoordinatePoints(rawSource, includedIds || undefined, excludedIds);
+  const doc = new DOMParser().parseFromString(`<svg>${rawSource}</svg>`, "image/svg+xml");
+  const svg = doc.querySelector("svg");
+  if (svg && !doc.querySelector("parsererror")) {
+    const editableNodes = Array.from(svg.querySelectorAll(editableSelector));
+    const excludedNodes = editableNodes.filter((_, index) => excludedNodeIndexes.has(index));
+    editableNodes.forEach((node, index) => {
+      if (excludedNodes.some((excludedNode) => excludedNode === node || excludedNode.contains(node))) return;
+      if (!nodeIndexes || nodeIndexes.has(index)) {
+        points.push(...getElementCoordinatePoints(node));
+      }
+    });
+  }
+
+  return getPointBounds(points);
 };
 
 const formatSvgNumber = (value: number) => String(Number(value.toFixed(4)));
@@ -451,48 +701,6 @@ const setXmlAttribute = (attrs: string, name: string, value: string) => {
   }
 
   return `${attrs.trimEnd()} ${name}="${value}"`;
-};
-
-const updateTerminalPosition = (terminalId: string, x: number, y: number, source = editorOption.editValue) => {
-  const terminalIndex = Number(terminalId.replace("terminal:", ""));
-  if (!Number.isFinite(terminalIndex)) return;
-
-  let currentIndex = -1;
-  const terminalPattern = /<TerminalPosition\b([^>]*)\/>|<TerminalPosition\b([^>]*)>\s*<\/TerminalPosition>/gi;
-  const nextContent = source.replace(terminalPattern, (full, selfClosingAttrs = "", pairedAttrs = "") => {
-    const attrs = parseTagAttributes(selfClosingAttrs || pairedAttrs);
-    if (!Number.isFinite(Number(attrs.x)) || !Number.isFinite(Number(attrs.y))) return full;
-
-    currentIndex += 1;
-    if (currentIndex !== terminalIndex) return full;
-
-    const nextAttrs = setXmlAttribute(
-      setXmlAttribute(selfClosingAttrs || pairedAttrs, "x", formatSvgNumber(x)),
-      "y",
-      formatSvgNumber(y),
-    );
-    return selfClosingAttrs ? `<TerminalPosition${nextAttrs}/>` : `<TerminalPosition${nextAttrs}></TerminalPosition>`;
-  });
-
-  editorOption.editValue = nextContent;
-};
-
-const translatePathData = (value: string, dx: number, dy: number) => {
-  let coordinateIndex = 0;
-  return value.replace(/-?\d*\.?\d+(?:e[-+]?\d+)?/gi, (match) => {
-    const nextValue = Number(match) + (coordinateIndex % 2 === 0 ? dx : dy);
-    coordinateIndex += 1;
-    return formatSvgNumber(nextValue);
-  });
-};
-
-const translatePoints = (value: string, dx: number, dy: number) => {
-  let coordinateIndex = 0;
-  return value.replace(/-?\d*\.?\d+(?:e[-+]?\d+)?/gi, (match) => {
-    const nextValue = Number(match) + (coordinateIndex % 2 === 0 ? dx : dy);
-    coordinateIndex += 1;
-    return formatSvgNumber(nextValue);
-  });
 };
 
 const transformCoordinatePairs = (
@@ -519,99 +727,166 @@ const transformCoordinatePairs = (
   });
 };
 
-const updateSvgElementByCoordinates = (
-  elementId: string,
-  change: { dx?: number; dy?: number; scale?: number; center?: { x: number; y: number } },
+const rotatePoint = (point: { x: number; y: number }, center: { x: number; y: number }, rotate = 0) => {
+  if (!rotate) return point;
+
+  const angle = (rotate * Math.PI) / 180;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const dx = point.x - center.x;
+  const dy = point.y - center.y;
+  return {
+    x: center.x + dx * cos - dy * sin,
+    y: center.y + dx * sin + dy * cos,
+  };
+};
+
+const getSvgElementIndex = (elementId: string) => Number(elementId.replace("node:", ""));
+const getTerminalIndex = (elementId: string) => Number(elementId.replace("terminal:", ""));
+
+const updateTerminalPositionsByCoordinates = (
+  elementIds: string[],
+  change: { dx?: number; dy?: number; rotate?: number; scale?: number; center?: { x: number; y: number } },
+  source: string,
+) => {
+  const terminalIndexes = new Set(
+    elementIds
+      .filter((elementId) => elementId.startsWith("terminal:"))
+      .map(getTerminalIndex)
+      .filter((index) => Number.isFinite(index)),
+  );
+  if (!terminalIndexes.size) return source;
+
+  let currentIndex = -1;
+  const dx = change.dx || 0;
+  const dy = change.dy || 0;
+  const rotate = change.rotate || 0;
+  const scale = change.scale || 1;
+  const center = change.center || { x: 0, y: 0 };
+  const terminalPattern = /<TerminalPosition\b([^>]*)\/>|<TerminalPosition\b([^>]*)>\s*<\/TerminalPosition>/gi;
+
+  return source.replace(terminalPattern, (full, selfClosingAttrs = "", pairedAttrs = "") => {
+    const attrs = parseTagAttributes(selfClosingAttrs || pairedAttrs);
+    const x = Number(attrs.x);
+    const y = Number(attrs.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return full;
+
+    currentIndex += 1;
+    if (!terminalIndexes.has(currentIndex)) return full;
+
+    const scaledPoint = {
+      x: center.x + (x - center.x) * scale,
+      y: center.y + (y - center.y) * scale,
+    };
+    const nextPoint = rotatePoint(scaledPoint, center, rotate);
+    const nextAttrs = setXmlAttribute(
+      setXmlAttribute(selfClosingAttrs || pairedAttrs, "x", formatSvgNumber(nextPoint.x + dx)),
+      "y",
+      formatSvgNumber(nextPoint.y + dy),
+    );
+    return selfClosingAttrs ? `<TerminalPosition${nextAttrs}/>` : `<TerminalPosition${nextAttrs}></TerminalPosition>`;
+  });
+};
+
+const updateSvgElementsByCoordinates = (
+  elementIds: string[],
+  change: { dx?: number; dy?: number; rotate?: number; scale?: number; center?: { x: number; y: number } },
   source = editorOption.editValue,
 ) => {
-  if (!elementId.startsWith("node:")) return;
+  const nodeIndexes = new Set(
+    elementIds
+      .filter((elementId) => elementId.startsWith("node:"))
+      .map(getSvgElementIndex)
+      .filter((index) => Number.isFinite(index)),
+  );
+  const rawSource = removeXmlns(getEditorContent(source));
 
-  const rawContent = removeXmlns(getEditorContent(source));
-  const doc = new DOMParser().parseFromString(`<svg>${rawContent}</svg>`, "image/svg+xml");
+  let nextSource = updateTerminalPositionsByCoordinates(elementIds, change, rawSource);
+  if (!nodeIndexes.size) {
+    editorOption.editValue = nextSource;
+    return;
+  }
+
+  const doc = new DOMParser().parseFromString(`<svg>${nextSource}</svg>`, "image/svg+xml");
   const svg = doc.querySelector("svg");
   if (!svg || doc.querySelector("parsererror")) return;
 
-  const target = Array.from(svg.querySelectorAll(editableSelector))[Number(elementId.replace("node:", ""))];
-  if (!target) return;
-
-  const tagName = target.tagName.toLowerCase();
   const dx = change.dx || 0;
   const dy = change.dy || 0;
+  const rotate = change.rotate || 0;
   const scale = change.scale || 1;
   const center = change.center || { x: 0, y: 0 };
-  const scaleNumberAttr = (name: string) => {
-    const current = Number(target.getAttribute(name) || 0);
-    target.setAttribute(name, formatSvgNumber(center.x + (current - center.x) * scale));
+  const transformPoint = (point: { x: number; y: number }) => {
+    const scaledPoint = {
+      x: center.x + (point.x - center.x) * scale,
+      y: center.y + (point.y - center.y) * scale,
+    };
+    const rotatedPoint = rotatePoint(scaledPoint, center, rotate);
+    return {
+      x: rotatedPoint.x + dx,
+      y: rotatedPoint.y + dy,
+    };
   };
-  const scaleVerticalNumberAttr = (name: string) => {
-    const current = Number(target.getAttribute(name) || 0);
-    target.setAttribute(name, formatSvgNumber(center.y + (current - center.y) * scale));
-  };
-  const moveTarget = (node: Element) => {
+  const updateTarget = (node: Element) => {
     const nodeTagName = node.tagName.toLowerCase();
-    const addAttr = (name: string, delta: number) => {
+    const transformAttr = (name: string, transform: (value: number) => number) => {
       const current = Number(node.getAttribute(name) || 0);
-      node.setAttribute(name, formatSvgNumber(current + delta));
+      node.setAttribute(name, formatSvgNumber(transform(current)));
     };
 
     if (["rect", "image", "text", "use"].includes(nodeTagName)) {
-      addAttr("x", dx);
-      addAttr("y", dy);
+      const x = Number(node.getAttribute("x") || 0);
+      const y = Number(node.getAttribute("y") || 0);
+      const nextPoint = transformPoint({ x, y });
+      node.setAttribute("x", formatSvgNumber(nextPoint.x));
+      node.setAttribute("y", formatSvgNumber(nextPoint.y));
+      if (["rect", "image", "use"].includes(nodeTagName)) {
+        transformAttr("width", (value) => value * scale);
+        transformAttr("height", (value) => value * scale);
+      }
     } else if (["circle", "ellipse"].includes(nodeTagName)) {
-      addAttr("cx", dx);
-      addAttr("cy", dy);
+      const cx = Number(node.getAttribute("cx") || 0);
+      const cy = Number(node.getAttribute("cy") || 0);
+      const nextPoint = transformPoint({ x: cx, y: cy });
+      node.setAttribute("cx", formatSvgNumber(nextPoint.x));
+      node.setAttribute("cy", formatSvgNumber(nextPoint.y));
+      if (nodeTagName === "circle") {
+        transformAttr("r", (value) => value * scale);
+      } else {
+        transformAttr("rx", (value) => value * scale);
+        transformAttr("ry", (value) => value * scale);
+      }
     } else if (nodeTagName === "line") {
-      addAttr("x1", dx);
-      addAttr("y1", dy);
-      addAttr("x2", dx);
-      addAttr("y2", dy);
+      const point1 = transformPoint({
+        x: Number(node.getAttribute("x1") || 0),
+        y: Number(node.getAttribute("y1") || 0),
+      });
+      const point2 = transformPoint({
+        x: Number(node.getAttribute("x2") || 0),
+        y: Number(node.getAttribute("y2") || 0),
+      });
+      node.setAttribute("x1", formatSvgNumber(point1.x));
+      node.setAttribute("y1", formatSvgNumber(point1.y));
+      node.setAttribute("x2", formatSvgNumber(point2.x));
+      node.setAttribute("y2", formatSvgNumber(point2.y));
     } else if (["polyline", "polygon"].includes(nodeTagName)) {
-      node.setAttribute("points", translatePoints(node.getAttribute("points") || "", dx, dy));
+      node.setAttribute(
+        "points",
+        transformCoordinatePairs(node.getAttribute("points") || "", transformPoint),
+      );
     } else if (nodeTagName === "path") {
-      node.setAttribute("d", translatePathData(node.getAttribute("d") || "", dx, dy));
+      node.setAttribute(
+        "d",
+        transformCoordinatePairs(node.getAttribute("d") || "", transformPoint),
+      );
     } else if (nodeTagName === "g") {
-      Array.from(node.querySelectorAll(editableSelector)).forEach(moveTarget);
+      Array.from(node.querySelectorAll(editableSelector)).forEach(updateTarget);
     }
   };
 
-  if (activeElementEdit.mode === "move") {
-    moveTarget(target);
-  } else if (activeElementEdit.mode === "scale" && ["rect", "image", "use"].includes(tagName)) {
-    scaleNumberAttr("x");
-    scaleVerticalNumberAttr("y");
-    target.setAttribute("width", formatSvgNumber(Number(target.getAttribute("width") || 0) * scale));
-    target.setAttribute("height", formatSvgNumber(Number(target.getAttribute("height") || 0) * scale));
-  } else if (activeElementEdit.mode === "scale" && tagName === "circle") {
-    scaleNumberAttr("cx");
-    scaleVerticalNumberAttr("cy");
-    target.setAttribute("r", formatSvgNumber(Number(target.getAttribute("r") || 0) * scale));
-  } else if (activeElementEdit.mode === "scale" && tagName === "ellipse") {
-    scaleNumberAttr("cx");
-    scaleVerticalNumberAttr("cy");
-    target.setAttribute("rx", formatSvgNumber(Number(target.getAttribute("rx") || 0) * scale));
-    target.setAttribute("ry", formatSvgNumber(Number(target.getAttribute("ry") || 0) * scale));
-  } else if (activeElementEdit.mode === "scale" && tagName === "line") {
-    scaleNumberAttr("x1");
-    scaleVerticalNumberAttr("y1");
-    scaleNumberAttr("x2");
-    scaleVerticalNumberAttr("y2");
-  } else if (activeElementEdit.mode === "scale" && ["polyline", "polygon"].includes(tagName)) {
-    target.setAttribute(
-      "points",
-      transformCoordinatePairs(target.getAttribute("points") || "", ({ x, y }) => ({
-        x: center.x + (x - center.x) * scale,
-        y: center.y + (y - center.y) * scale,
-      })),
-    );
-  } else if (activeElementEdit.mode === "scale" && tagName === "path") {
-    target.setAttribute(
-      "d",
-      transformCoordinatePairs(target.getAttribute("d") || "", ({ x, y }) => ({
-        x: center.x + (x - center.x) * scale,
-        y: center.y + (y - center.y) * scale,
-      })),
-    );
-  }
+  Array.from(svg.querySelectorAll(editableSelector)).forEach((node, index) => {
+    if (nodeIndexes.has(index)) updateTarget(node);
+  });
 
   editorOption.editValue = formatXml(
     Array.from(svg.childNodes)
@@ -621,34 +896,50 @@ const updateSvgElementByCoordinates = (
   );
 };
 
-const startElementEdit = (mode: "move" | "scale" | "rotate", event: PointerEvent, element: SVGGraphicsElement) => {
+const startElementEdit = (event: PointerEvent, element: SVGGraphicsElement) => {
   const point = getSvgPoint(element, event.clientX, event.clientY);
   if (!point) return;
 
-  const centerPoint = getElementCenterPoint(element);
-  activeElementEdit.mode = mode;
-  activeElementEdit.elementId = element.dataset.svgEditId || "";
+  activeElementEdit.mode = "move";
+  activeElementEdit.elementIds = [...selectedSvgElementIds.value];
   activeElementEdit.startPoint = point;
-  activeElementEdit.centerPoint = centerPoint;
   activeElementEdit.terminalStartPoint = {
-    x: Number(element.getAttribute("cx")) || centerPoint.x,
-    y: Number(element.getAttribute("cy")) || centerPoint.y,
+    x: Number(element.getAttribute("cx")) || point.x,
+    y: Number(element.getAttribute("cy")) || point.y,
   };
-  activeElementEdit.startDistance = Math.max(Math.hypot(point.x - centerPoint.x, point.y - centerPoint.y), 0.1);
-  activeElementEdit.startAngle = Math.atan2(point.y - centerPoint.y, point.x - centerPoint.x);
   activeElementEdit.startMatrix = new DOMMatrix();
   activeElementEdit.startContent = editorOption.editValue;
 };
 
-const selectElement = (element: SVGGraphicsElement) => {
-  selectedSvgElementId.value = element.dataset.svgEditId || "";
-  selectedElementName.value = element.dataset.svgEditKind || element.tagName.toLowerCase();
+const syncSelectedElementName = () => {
+  if (selectedSvgElementIds.value.length > 1) {
+    selectedElementName.value = `已选 ${selectedSvgElementIds.value.length} 项`;
+    return;
+  }
+
+  const element = getSelectedPreviewElement();
+  selectedElementName.value = element ? element.dataset.svgEditKind || element.tagName.toLowerCase() : "";
+};
+
+const selectElement = (element: SVGGraphicsElement, append = false) => {
+  const elementId = element.dataset.svgEditId || "";
+  if (!elementId) return;
+
+  if (append) {
+    selectedSvgElementIds.value = selectedSvgElementIds.value.includes(elementId)
+      ? selectedSvgElementIds.value.filter((id) => id !== elementId)
+      : [...selectedSvgElementIds.value, elementId];
+  } else {
+    selectedSvgElementIds.value = [elementId];
+  }
+
+  syncSelectedElementName();
   updateSelectionBox();
 };
 
 const stopElementEdit = () => {
   activeElementEdit.mode = "";
-  activeElementEdit.elementId = "";
+  activeElementEdit.elementIds = [];
   activeElementEdit.startMatrix = null;
   activeElementEdit.startContent = "";
 };
@@ -718,7 +1009,9 @@ const handlePreviewWheel = (event: WheelEvent) => {
 
 const startPan = (event: PointerEvent) => {
   if (event.button !== 0) return;
-  selectedSvgElementId.value = "";
+  selectedSvgElementIds.value = [];
+  selectedElementName.value = "";
+  contextMenu.visible = false;
   selectionBox.visible = false;
   isPanning.value = true;
   lastPanPoint.x = event.clientX;
@@ -737,14 +1030,16 @@ const getEditableTarget = (event: PointerEvent) => {
 
 const handlePreviewPointerDown = (event: PointerEvent) => {
   if (event.button !== 0) return;
+  contextMenu.visible = false;
 
-  const handle = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-svg-edit-handle]") : null;
-  if (handle) {
+  const selectionTarget =
+    event.target instanceof Element ? event.target.closest<HTMLElement>(".svg-selection-box") : null;
+  if (selectionTarget && hasSelectedElement.value) {
     const selectedElement = getSelectedPreviewElement();
     if (!selectedElement) return;
     event.preventDefault();
     event.stopPropagation();
-    startElementEdit(handle.dataset.svgEditHandle as "scale" | "rotate", event, selectedElement);
+    startElementEdit(event, selectedElement);
     return;
   }
 
@@ -752,12 +1047,32 @@ const handlePreviewPointerDown = (event: PointerEvent) => {
   if (editableTarget) {
     event.preventDefault();
     event.stopPropagation();
-    selectElement(editableTarget);
-    startElementEdit("move", event, editableTarget);
+    selectElement(editableTarget, event.shiftKey || event.ctrlKey || event.metaKey);
     return;
   }
 
   startPan(event);
+};
+
+const handlePreviewContextMenu = (event: MouseEvent) => {
+  const editableTarget =
+    event.target instanceof Element ? event.target.closest<SVGGraphicsElement>("[data-svg-edit-id]") : null;
+  const selectionTarget =
+    event.target instanceof Element ? event.target.closest<HTMLElement>(".svg-selection-box") : null;
+
+  if (!editableTarget && !selectionTarget && !hasSelectedElement.value) return;
+
+  event.preventDefault();
+  const contentRect = previewContentRef.value?.getBoundingClientRect();
+  if (!contentRect) return;
+
+  if (editableTarget && !selectedSvgElementIds.value.includes(editableTarget.dataset.svgEditId || "")) {
+    selectElement(editableTarget);
+  }
+
+  contextMenu.left = event.clientX - contentRect.left;
+  contextMenu.top = event.clientY - contentRect.top;
+  contextMenu.visible = true;
 };
 
 const updateElementEdit = (event: PointerEvent) => {
@@ -767,22 +1082,9 @@ const updateElementEdit = (event: PointerEvent) => {
   const point = getSvgPoint(selectedElement, event.clientX, event.clientY);
   if (!point) return;
 
-  if (activeElementEdit.elementId.startsWith("terminal:")) {
-    if (activeElementEdit.mode !== "move") return;
-
-    updateTerminalPosition(
-      activeElementEdit.elementId,
-      activeElementEdit.terminalStartPoint.x + point.x - activeElementEdit.startPoint.x,
-      activeElementEdit.terminalStartPoint.y + point.y - activeElementEdit.startPoint.y,
-      activeElementEdit.startContent,
-    );
-    scheduleSelectionBoxUpdate();
-    return;
-  }
-
   if (activeElementEdit.mode === "move") {
-    updateSvgElementByCoordinates(
-      activeElementEdit.elementId,
+    updateSvgElementsByCoordinates(
+      activeElementEdit.elementIds,
       {
         dx: point.x - activeElementEdit.startPoint.x,
         dy: point.y - activeElementEdit.startPoint.y,
@@ -793,23 +1095,89 @@ const updateElementEdit = (event: PointerEvent) => {
     return;
   }
 
-  if (activeElementEdit.mode === "scale") {
-    const distance = Math.max(
-      Math.hypot(point.x - activeElementEdit.centerPoint.x, point.y - activeElementEdit.centerPoint.y),
-      0.1,
-    );
-    updateSvgElementByCoordinates(
-      activeElementEdit.elementId,
-      {
-        scale: Math.max(distance / activeElementEdit.startDistance, 0.05),
-        center: activeElementEdit.centerPoint,
-      },
-      activeElementEdit.startContent,
-    );
-    scheduleSelectionBoxUpdate();
-    return;
-  }
+  scheduleSelectionBoxUpdate();
+};
 
+const closeContextMenu = () => {
+  contextMenu.visible = false;
+};
+
+const getSelectionCenterPoint = () => {
+  const bounds = getSourceSvgBounds(selectedSvgElementIds.value);
+  if (!bounds) return null;
+
+  return {
+    x: bounds.left + bounds.width / 2,
+    y: bounds.top + bounds.height / 2,
+  };
+};
+
+const applySelectedTransform = (change: { rotate?: number; scale?: number }) => {
+  const center = getSelectionCenterPoint();
+  if (!center) return;
+
+  updateSvgElementsByCoordinates(selectedSvgElementIds.value, {
+    center,
+    ...change,
+  });
+  scheduleSelectionBoxUpdate();
+};
+
+const scaleSelectedElements = (scale: number) => {
+  const center = getSelectionCenterPoint();
+  if (!center) return;
+
+  updateSvgElementsByCoordinates(selectedSvgElementIds.value, {
+    center,
+    scale,
+  });
+  scheduleSelectionBoxUpdate();
+};
+
+const rotateSelectedElements = (rotate: number) => {
+  applySelectedTransform({ rotate });
+};
+
+const moveSelectedElements = (dx: number, dy: number) => {
+  updateSvgElementsByCoordinates(selectedSvgElementIds.value, { dx, dy });
+  scheduleSelectionBoxUpdate();
+};
+
+const openTransformPanel = (mode: "scale" | "move" | "rotate") => {
+  const contentRect = previewContentRef.value?.getBoundingClientRect();
+  transformPanel.mode = mode;
+  transformPanel.left = Math.max(8, Math.min(contextMenu.left + 12, (contentRect?.width || 360) - 248));
+  transformPanel.top = Math.max(8, Math.min(contextMenu.top, (contentRect?.height || 260) - 174));
+  transformPanel.visible = true;
+  closeContextMenu();
+};
+
+const startTransformPanelDrag = (event: PointerEvent) => {
+  if (event.button !== 0) return;
+  transformPanel.dragging = true;
+  transformPanel.dragOffsetX = event.clientX - transformPanel.left;
+  transformPanel.dragOffsetY = event.clientY - transformPanel.top;
+};
+
+const stopTransformPanelDrag = () => {
+  transformPanel.dragging = false;
+};
+
+const alignSelectedElements = (direction: "horizontal" | "vertical") => {
+  const selectedBounds = getSourceSvgBounds(selectedSvgElementIds.value);
+  if (!selectedBounds) return;
+
+  const [viewBoxX, viewBoxY, viewBoxWidth, viewBoxHeight] = normalizeViewBoxText(viewBoxText.value).split(",").map(Number);
+  const svgCenterX = viewBoxX + viewBoxWidth / 2;
+  const svgCenterY = viewBoxY + viewBoxHeight / 2;
+  const selectionCenterX = selectedBounds.left + selectedBounds.width / 2;
+  const selectionCenterY = selectedBounds.top + selectedBounds.height / 2;
+
+  updateSvgElementsByCoordinates(selectedSvgElementIds.value, {
+    dx: direction === "horizontal" ? svgCenterX - selectionCenterX : 0,
+    dy: direction === "vertical" ? svgCenterY - selectionCenterY : 0,
+  });
+  closeContextMenu();
   scheduleSelectionBoxUpdate();
 };
 
@@ -859,6 +1227,15 @@ watch(viewBoxText, (value) => {
 watch(previewRatio, (value) => writeLocal(storageKeys.split, String(Math.round(value * 100) / 100)));
 
 useEventListener(window, "pointermove", (event) => {
+  if (transformPanel.dragging) {
+    const contentRect = previewContentRef.value?.getBoundingClientRect();
+    const maxLeft = Math.max((contentRect?.width || 0) - 248, 8);
+    const maxTop = Math.max((contentRect?.height || 0) - 174, 8);
+    transformPanel.left = Math.min(maxLeft, Math.max(8, event.clientX - transformPanel.dragOffsetX));
+    transformPanel.top = Math.min(maxTop, Math.max(8, event.clientY - transformPanel.dragOffsetY));
+    return;
+  }
+
   if (activeElementEdit.mode) {
     updateElementEdit(event);
     return;
@@ -878,11 +1255,13 @@ useEventListener(window, "pointermove", (event) => {
 });
 
 useEventListener(window, "pointerup", () => {
+  stopTransformPanelDrag();
   stopElementEdit();
   stopResize();
   stopPan();
 });
 useEventListener(window, "blur", () => {
+  stopTransformPanelDrag();
   stopElementEdit();
   stopResize();
   stopPan();
@@ -948,8 +1327,16 @@ watch(previewSvg, scheduleSelectionBoxUpdate);
             <el-button :icon="Refresh" text circle size="small" @click="resetPreviewTransform" />
           </div>
         </div>
-        <div ref="previewContentRef" class="svg-content" @wheel.prevent="handlePreviewWheel" @pointerdown="handlePreviewPointerDown">
-          <div ref="previewCanvasRef" class="svg-canvas" :style="previewCanvasStyle" v-html="previewSvg"></div>
+        <div
+          ref="previewContentRef"
+          class="svg-content"
+          @wheel.prevent="handlePreviewWheel"
+          @pointerdown="handlePreviewPointerDown"
+          @contextmenu="handlePreviewContextMenu">
+          <div ref="previewCanvasRef" class="svg-canvas" :style="previewCanvasStyle">
+            <div class="svg-viewbox-boundary"></div>
+            <div class="svg-render-layer" v-html="previewSvg"></div>
+          </div>
           <div v-if="previewError" class="svg-preview-error">
             <strong>SVG 预览失败</strong>
             <span>{{ previewError }}</span>
@@ -962,10 +1349,78 @@ watch(previewSvg, scheduleSelectionBoxUpdate);
               top: `${selectionBox.top}px`,
               width: `${selectionBox.width}px`,
               height: `${selectionBox.height}px`,
-            }">
-            <template v-if="!isSelectedTerminal">
-              <span class="svg-selection-handle scale-handle" data-svg-edit-handle="scale"></span>
-            </template>
+            }"></div>
+          <div
+            v-if="contextMenu.visible"
+            class="svg-context-menu"
+            :style="{ left: `${contextMenu.left}px`, top: `${contextMenu.top}px` }"
+            @pointerdown.stop
+            @contextmenu.prevent.stop>
+            <button type="button" @click="openTransformPanel('scale')">缩放</button>
+            <button type="button" @click="openTransformPanel('move')">平移</button>
+            <button type="button" @click="openTransformPanel('rotate')">旋转</button>
+            <button type="button" @click="alignSelectedElements('horizontal')">左右居中</button>
+            <button type="button" @click="alignSelectedElements('vertical')">上下居中</button>
+          </div>
+          <div
+            v-if="transformPanel.visible"
+            class="svg-transform-panel"
+            :style="{ left: `${transformPanel.left}px`, top: `${transformPanel.top}px` }"
+            @pointerdown.stop
+            @contextmenu.prevent.stop>
+            <div class="svg-transform-panel-header" @pointerdown="startTransformPanelDrag">
+              <span>
+                {{
+                  transformPanel.mode === "scale"
+                    ? "缩放选中元素"
+                    : transformPanel.mode === "move"
+                      ? "平移选中元素"
+                      : "旋转选中元素"
+                }}
+              </span>
+              <button type="button" @click.stop="transformPanel.visible = false">×</button>
+            </div>
+            <div v-if="transformPanel.mode === 'scale'" class="svg-transform-panel-body">
+              <label>
+                <span>步进</span>
+                <input v-model.number="transformPanel.scaleStep" min="1" max="90" step="1" type="number" />
+                <em>%</em>
+              </label>
+              <div class="svg-transform-actions">
+                <button type="button" @click="scaleSelectedElements(1 + transformPanel.scaleStep / 100)">放大</button>
+                <button type="button" @click="scaleSelectedElements(Math.max(0.01, 1 - transformPanel.scaleStep / 100))">缩小</button>
+              </div>
+            </div>
+            <div v-else-if="transformPanel.mode === 'move'" class="svg-transform-panel-body svg-move-panel-body">
+              <div class="svg-move-steps">
+                <label>
+                  <span>X</span>
+                  <input v-model.number="transformPanel.moveStepX" step="0.1" type="number" />
+                </label>
+                <label>
+                  <span>Y</span>
+                  <input v-model.number="transformPanel.moveStepY" step="0.1" type="number" />
+                </label>
+              </div>
+              <div class="svg-move-wheel">
+                <button class="is-up" type="button" @click="moveSelectedElements(0, -transformPanel.moveStepY)">上</button>
+                <button class="is-left" type="button" @click="moveSelectedElements(-transformPanel.moveStepX, 0)">左</button>
+                <span></span>
+                <button class="is-right" type="button" @click="moveSelectedElements(transformPanel.moveStepX, 0)">右</button>
+                <button class="is-down" type="button" @click="moveSelectedElements(0, transformPanel.moveStepY)">下</button>
+              </div>
+            </div>
+            <div v-else class="svg-transform-panel-body">
+              <label>
+                <span>角度</span>
+                <input v-model.number="transformPanel.rotateStep" min="1" max="180" step="1" type="number" />
+                <em>deg</em>
+              </label>
+              <div class="svg-transform-actions">
+                <button type="button" @click="rotateSelectedElements(-transformPanel.rotateStep)">左旋</button>
+                <button type="button" @click="rotateSelectedElements(transformPanel.rotateStep)">右旋</button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -1206,7 +1661,8 @@ watch(previewSvg, scheduleSelectionBoxUpdate);
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.84),
     0 10px 24px rgba(15, 23, 42, 0.12);
-  pointer-events: none;
+  cursor: move;
+  pointer-events: auto;
 }
 
 .svg-preview-error {
@@ -1241,25 +1697,6 @@ watch(previewSvg, scheduleSelectionBoxUpdate);
   }
 }
 
-.svg-selection-handle {
-  position: absolute;
-  z-index: 3;
-  box-sizing: border-box;
-  width: 10px;
-  height: 10px;
-  border: 2px solid #fff;
-  border-radius: 50%;
-  background: var(--yh-brand-color);
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18);
-  pointer-events: auto;
-}
-
-.scale-handle {
-  right: -6px;
-  bottom: -6px;
-  cursor: nwse-resize;
-}
-
 .svg-canvas {
   position: absolute;
   left: 5%;
@@ -1270,6 +1707,15 @@ watch(previewSvg, scheduleSelectionBoxUpdate);
   height: 90%;
   transform-origin: 0 0;
 
+  .svg-render-layer {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+  }
+
   :deep(svg) {
     width: 100%;
     height: 100%;
@@ -1277,12 +1723,235 @@ watch(previewSvg, scheduleSelectionBoxUpdate);
   }
 
   :deep([data-svg-edit-id]) {
-    cursor: move;
+    cursor: pointer;
   }
 
   :deep([data-svg-edit-id]:hover) {
     filter: drop-shadow(0 0 3px rgba(71, 135, 240, 0.45));
   }
+}
+
+.svg-context-menu {
+  position: absolute;
+  z-index: 5;
+  min-width: 104px;
+  padding: 5px;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.16);
+  backdrop-filter: blur(10px);
+
+  button {
+    display: block;
+    width: 100%;
+    height: 28px;
+    border: 0;
+    border-radius: 4px;
+    padding: 0 9px;
+    color: var(--yh-text-color-primary);
+    background: transparent;
+    font-size: 12px;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--yh-brand-color);
+      background: rgba(71, 135, 240, 0.1);
+    }
+  }
+}
+
+.svg-transform-panel {
+  position: absolute;
+  z-index: 6;
+  width: 240px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(12px);
+}
+
+.svg-transform-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 34px;
+  padding: 0 8px 0 10px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  cursor: move;
+
+  span {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--yh-text-color-primary);
+  }
+
+  button {
+    width: 24px;
+    height: 24px;
+    border: 0;
+    border-radius: 4px;
+    color: var(--yh-text-color-secondary);
+    background: transparent;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--yh-brand-color);
+      background: rgba(71, 135, 240, 0.1);
+    }
+  }
+}
+
+.svg-transform-panel-body {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+
+  label {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 34px;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--yh-text-color-secondary);
+  }
+
+  input {
+    width: 100%;
+    height: 28px;
+    box-sizing: border-box;
+    border: 1px solid var(--yh-border-level-1-color);
+    border-radius: 5px;
+    padding: 0 7px;
+    color: var(--yh-text-color-primary);
+    background: var(--yh-bg-color-page);
+    outline: none;
+
+    &:focus {
+      border-color: rgba(71, 135, 240, 0.58);
+      box-shadow: 0 0 0 3px rgba(71, 135, 240, 0.1);
+    }
+  }
+
+  em {
+    font-style: normal;
+    color: var(--yh-text-color-secondary);
+  }
+}
+
+.svg-transform-actions {
+  display: grid;
+  gap: 8px;
+
+  button {
+    height: 30px;
+    border: 1px solid rgba(71, 135, 240, 0.18);
+    border-radius: 5px;
+    color: var(--yh-brand-color);
+    background: rgba(71, 135, 240, 0.08);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover {
+      border-color: rgba(71, 135, 240, 0.34);
+      background: rgba(71, 135, 240, 0.14);
+    }
+  }
+}
+
+.svg-transform-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.svg-move-panel-body {
+  display: grid;
+  grid-template-columns: 76px 112px;
+  align-items: center;
+  gap: 10px;
+}
+
+.svg-move-steps {
+  display: grid;
+  gap: 8px;
+
+  label {
+    grid-template-columns: 16px minmax(0, 1fr);
+    gap: 6px;
+  }
+}
+
+.svg-move-wheel {
+  display: grid;
+  grid-template-columns: repeat(3, 34px);
+  grid-template-rows: repeat(3, 30px);
+  place-content: center;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid rgba(71, 135, 240, 0.14);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(71, 135, 240, 0.12), rgba(71, 135, 240, 0.04) 58%, transparent 59%);
+
+  button {
+    border: 1px solid rgba(71, 135, 240, 0.2);
+    border-radius: 7px;
+    color: var(--yh-brand-color);
+    background: var(--yh-bg-color-container);
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+
+    &:hover {
+      border-color: rgba(71, 135, 240, 0.42);
+      background: rgba(71, 135, 240, 0.12);
+    }
+  }
+
+  span {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: center;
+    justify-self: center;
+    width: 10px;
+    height: 10px;
+    border: 2px solid rgba(71, 135, 240, 0.28);
+    border-radius: 50%;
+    background: var(--yh-bg-color-container);
+  }
+
+  .is-up {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .is-left {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .is-right {
+    grid-column: 3;
+    grid-row: 2;
+  }
+
+  .is-down {
+    grid-column: 2;
+    grid-row: 3;
+  }
+}
+
+.svg-viewbox-boundary {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border: calc(1.5px / var(--svg-preview-scale, 1)) dashed rgba(71, 135, 240, 0.62);
+  border-radius: 4px;
+  background: transparent;
+  box-shadow: none;
+  pointer-events: none;
 }
 
 .is-resizing {
