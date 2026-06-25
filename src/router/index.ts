@@ -143,7 +143,7 @@ const routes: Array<RouteRecordRaw> = [
         path: RouterEnum.XiangJiangshiKaipaoEquipment,
         name: RouterEnum.XiangJiangshiKaipaoEquipment,
         component: () =>
-          import(/* webpackChunkName: "tools" */ "../views/tools/向僵尸开炮/equipment-entries.vue"),
+          import(/* webpackChunkName: "tools" */ "../views/tools/kaipao/equipment-entries.vue"),
         meta: {
           title: "向僵尸开炮装备词条表",
           noSplice: true,

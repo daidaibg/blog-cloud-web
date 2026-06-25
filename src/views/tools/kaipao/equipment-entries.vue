@@ -2,10 +2,20 @@
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { ArrowDown, Check, Plus, RefreshLeft, Delete, Upload } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
+import G1Logo from "@/assets/img/kaipao/G/logo/G1.png";
+import G2Logo from "@/assets/img/kaipao/G/logo/G2.png";
+import G3Logo from "@/assets/img/kaipao/G/logo/G3.png";
+import BracerIcon from "@/assets/img/kaipao/equipment/hubi.png";
+import PantsIcon from "@/assets/img/kaipao/equipment/kuzi.png";
+import GlovesIcon from "@/assets/img/kaipao/equipment/shoutao.png";
+import HelmetIcon from "@/assets/img/kaipao/equipment/toukui.png";
+import BootsIcon from "@/assets/img/kaipao/equipment/xiezi.png";
+import ClothesIcon from "@/assets/img/kaipao/equipment/yifu.png";
 import {
   equipmentEntryListByPart,
   equipmentEntryMap,
   equipmentParts,
+  type EquipmentEntry,
   type EquipmentPart,
   type EquipmentPartKey,
 } from "./equipment-entry-data";
@@ -28,7 +38,35 @@ const createDefaultRows = () => Array.from({ length: DEFAULT_ROW_COUNT }, create
 
 const tableRows = reactive<EntryRow[]>(createDefaultRows());
 const openedCellKey = ref("");
+const state = reactive({
+  showFullName: true,
+});
 
+const seasonLogoMap: Record<NonNullable<EquipmentEntry["season"]>, string> = {
+  G1: G1Logo,
+  G2: G2Logo,
+  G3: G3Logo,
+};
+
+const partIconMap: Record<EquipmentPartKey, string> = {
+  helmet: HelmetIcon,
+  clothes: ClothesIcon,
+  boots: BootsIcon,
+  bracer: BracerIcon,
+  pants: PantsIcon,
+  gloves: GlovesIcon,
+};
+
+/**
+ * 本地只保存词条 id；读取时用 map 校验 id 是否仍存在，避免旧缓存显示无效词条。
+ *
+ * 转换结构：
+ * Partial<EntryRow> -> EntryRow
+ *
+ * 示例：
+ * { helmet: "10000", clothes: "bad-id" }
+ * -> { helmet: "10000", clothes: "", boots: "", bracer: "", pants: "", gloves: "" }
+ */
 const sanitizeRow = (row: Partial<EntryRow>) => {
   return equipmentParts.reduce((nextRow, part) => {
     const value = row[part.key] || "";
@@ -37,17 +75,50 @@ const sanitizeRow = (row: Partial<EntryRow>) => {
   }, createEmptyRow());
 };
 
+/**
+ * 默认保持 6 行；如果本地已保存更多行，则按保存行数展示。
+ *
+ * 转换结构：
+ * Partial<EntryRow>[] -> EntryRow[]
+ *
+ * 示例：
+ * [{ helmet: "10000" }]
+ * -> [已校验行, 空行, 空行, 空行, 空行, 空行]
+ */
 const normalizeRows = (rows: Partial<EntryRow>[]) => {
   return [...rows, ...createDefaultRows()].slice(0, Math.max(rows.length, DEFAULT_ROW_COUNT)).map(sanitizeRow);
 };
 
+/**
+ * 记录每个部位当前已选的词条 id，用于下拉列表里隐藏同列已选项。
+ *
+ * 转换结构：
+ * EntryRow[] -> Record<EquipmentPartKey, string[]>
+ *
+ * 示例：
+ * [{ helmet: "10000", clothes: "20000" }, { helmet: "10001", clothes: "" }]
+ * -> { helmet: ["10000", "10001"], clothes: ["20000"], boots: [], bracer: [], pants: [], gloves: [] }
+ */
 const selectedByPart = computed(() => {
-  return equipmentParts.reduce((selectedMap, part) => {
-    selectedMap[part.key] = tableRows.map((row) => row[part.key]).filter(Boolean);
-    return selectedMap;
-  }, {} as Record<EquipmentPartKey, string[]>);
+  return equipmentParts.reduce(
+    (selectedMap, part) => {
+      selectedMap[part.key] = tableRows.map((row) => row[part.key]).filter(Boolean);
+      return selectedMap;
+    },
+    {} as Record<EquipmentPartKey, string[]>,
+  );
 });
 
+/**
+ * 当前单元格已选项需要保留，其它行已选过的同部位词条从下拉候选中移除。
+ *
+ * 转换结构：
+ * EquipmentEntry[] + 当前行 id + 同部位已选 id[] -> 当前单元格可选 EquipmentEntry[]
+ *
+ * 示例：
+ * boots 全量 [30000, 30001, 30002]，其它行已选 [30001]，当前行已选 30000
+ * -> 下拉保留 [30000, 30002]
+ */
 const getOptions = (part: EquipmentPart, row: EntryRow) => {
   const currentValue = row[part.key];
   return equipmentEntryListByPart[part.key].filter((entry) => {
@@ -55,22 +126,53 @@ const getOptions = (part: EquipmentPart, row: EntryRow) => {
   });
 };
 
+/**
+ * 表格单元格只保存 id，展示时通过 id 查完整词条对象。
+ *
+ * 转换结构：
+ * entryId -> EquipmentEntry | undefined
+ *
+ * 示例：
+ * "60050" -> { id: "60050", name: "燃油弹伤害+28%，减速效果+14%" }
+ */
 const getEntry = (id: string) => {
   return id ? equipmentEntryMap[id] : undefined;
 };
 
-const getEntryDisplayName = (entry?: { name: string; shortName?: string }) => {
+/**
+ * 有简称优先展示简称；没有简称时直接展示完整描述。
+ */
+const getEntryDisplayName = (entry?: Pick<EquipmentEntry, "name" | "shortName">) => {
   return entry?.shortName || entry?.name || "";
+};
+
+/**
+ * 赛季词条展示对应 G1/G2/G3 图片；普通词条不展示图标。
+ */
+const getEntrySeasonLogo = (entry?: Pick<EquipmentEntry, "season">) => {
+  return entry?.season ? seasonLogoMap[entry.season] : "";
 };
 
 const getCellKey = (rowIndex: number, partKey: EquipmentPartKey) => {
   return `${rowIndex}-${partKey}`;
 };
 
+/**
+ * Element Plus popover 用一个 cell key 控制展开，保证同一时间只有一个下拉弹窗打开。
+ */
 const setCellVisible = (rowIndex: number, partKey: EquipmentPartKey, visible: boolean) => {
   openedCellKey.value = visible ? getCellKey(rowIndex, partKey) : "";
 };
 
+/**
+ * 选择后只写入词条 id，完整词条详情仍从 equipmentEntryMap 中按需读取。
+ *
+ * 转换结构：
+ * EquipmentEntry -> EntryRow[partKey] = entry.id
+ *
+ * 示例：
+ * 选择 { id: "40050", name: "..." } 后，当前行 pants 从 "" 变成 "40050"。
+ */
 const selectEntry = (row: EntryRow, part: EquipmentPart, entryId: string) => {
   row[part.key] = entryId;
   openedCellKey.value = "";
@@ -136,7 +238,7 @@ watch(tableRows, saveToLocal, { deep: true });
 </script>
 
 <template>
-  <main class="kaipao-page">
+  <main class="kaipao-page comments gaobug">
     <section class="kaipao-toolbar">
       <div>
         <h1>向僵尸开炮装备词条表</h1>
@@ -144,7 +246,6 @@ watch(tableRows, saveToLocal, { deep: true });
       </div>
       <div class="toolbar-actions">
         <el-button :icon="RefreshLeft" @click="resetRows">清空</el-button>
-        <el-button :icon="Plus" @click="addRow">加一行</el-button>
         <el-button type="primary" :icon="Upload" @click="saveToBackend">保存</el-button>
       </div>
     </section>
@@ -154,7 +255,12 @@ watch(tableRows, saveToLocal, { deep: true });
         <thead>
           <tr>
             <th class="index-column">序号</th>
-            <th v-for="part in equipmentParts" :key="part.key">{{ part.label }}</th>
+            <th v-for="part in equipmentParts" :key="part.key">
+              <span class="part-header">
+                <img :src="partIconMap[part.key]" alt="" />
+                <span>{{ part.label }}</span>
+              </span>
+            </th>
             <th class="action-column">操作</th>
           </tr>
         </thead>
@@ -169,54 +275,58 @@ watch(tableRows, saveToLocal, { deep: true });
                 placement="bottom"
                 :show-arrow="true"
                 popper-class="kaipao-entry-popover"
-                @update:visible="setCellVisible(rowIndex, part.key, $event)"
-              >
+                @update:visible="setCellVisible(rowIndex, part.key, $event)">
                 <template #reference>
-                  <button
+                  <el-button
+                    link
                     class="entry-pick-button"
-                    :class="{ 'is-filled': row[part.key] }"
-                    type="button"
                     :aria-label="`${part.label}选择词条`"
-                    :title="getEntry(row[part.key])?.name || `选择${part.label}词条`"
-                  >
+                    :title="getEntry(row[part.key])?.name || `选择${part.label}词条`">
                     <el-icon><ArrowDown /></el-icon>
-                  </button>
+                  </el-button>
                 </template>
                 <div class="entry-dropdown">
                   <div class="entry-dropdown-head">
                     <strong>{{ part.label }}词条</strong>
-                    <button v-if="row[part.key]" type="button" @click="clearEntry(row, part)">清空</button>
+                    <div class="flex">
+                      <el-text size="small" type="primary">详情显示</el-text>
+                      <el-switch class="ml-1" v-model="state.showFullName" size="small" />
+                      <el-button class="ml-2" link size="small" v-if="row[part.key]" @click="clearEntry(row, part)"
+                        >清空</el-button
+                      >
+                    </div>
                   </div>
                   <el-scrollbar max-height="480px" class="entry-dropdown-scroll">
                     <div class="entry-option-list">
-                      <button
+                      <div
                         v-for="entry in getOptions(part, row)"
                         :key="entry.id"
                         class="entry-option-button"
                         :class="{ 'is-selected': isSelectedEntry(row, part, entry.id) }"
-                        type="button"
-                        @click="selectEntry(row, part, entry.id)"
-                      >
+                        @click="selectEntry(row, part, entry.id)">
                         <span class="entry-option-text">
-                          <strong>{{ getEntryDisplayName(entry) }}</strong>
-                          <span>{{ entry.name }}</span>
+                          <span class="entry-title">
+                            <img v-if="getEntrySeasonLogo(entry)" :src="getEntrySeasonLogo(entry)" alt="" />
+                            <strong>{{ getEntryDisplayName(entry) }}</strong>
+                          </span>
+                          <span v-if="state.showFullName">{{ entry.name }}</span>
                         </span>
                         <el-icon v-if="isSelectedEntry(row, part, entry.id)" class="entry-option-check">
                           <Check />
                         </el-icon>
-                      </button>
+                      </div>
                     </div>
                   </el-scrollbar>
                 </div>
               </el-popover>
               <div v-if="getEntry(row[part.key])" class="entry-brief-name">
-                {{ getEntryDisplayName(getEntry(row[part.key])) }}
+                <img
+                  v-if="getEntrySeasonLogo(getEntry(row[part.key]))"
+                  :src="getEntrySeasonLogo(getEntry(row[part.key]))"
+                  alt="" />
+                <span>{{ getEntryDisplayName(getEntry(row[part.key])) }}</span>
               </div>
-              <div
-                v-if="getEntry(row[part.key])"
-                class="entry-full-name"
-                :title="getEntry(row[part.key])?.name"
-              >
+              <div v-if="getEntry(row[part.key])" class="entry-full-name" :title="getEntry(row[part.key])?.name">
                 {{ getEntry(row[part.key])?.name }}
               </div>
             </td>
@@ -226,6 +336,9 @@ watch(tableRows, saveToLocal, { deep: true });
           </tr>
         </tbody>
       </table>
+      <div class="entry-table-actions">
+        <el-button :icon="Plus" @click="addRow" style="width: 100%;"  plain dashed >加一行</el-button>
+      </div>
     </section>
   </main>
 </template>
@@ -233,7 +346,7 @@ watch(tableRows, saveToLocal, { deep: true });
 <style scoped lang="scss">
 .kaipao-page {
   width: 100%;
-  min-height: 100vh;
+  max-width: 100%;
   padding: 24px;
   box-sizing: border-box;
   color: var(--yh-text-color-primary, var(--el-text-color-primary));
@@ -298,12 +411,29 @@ watch(tableRows, saveToLocal, { deep: true });
   }
 
   th {
-    height: 42px;
+    height: 54px;
     font-size: 17px;
     font-weight: 700;
     vertical-align: middle;
     color: var(--yh-text-color-brand, var(--yh-brand-color, var(--el-color-primary)));
     background: var(--yh-brand-color-1, var(--el-color-primary-light-9));
+  }
+
+  .part-header {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    line-height: 1;
+    white-space: nowrap;
+
+    img {
+      width: 28px;
+      height: 28px;
+      flex: 0 0 auto;
+      border-radius: 5px;
+      object-fit: cover;
+    }
   }
 
   .index-column {
@@ -329,14 +459,6 @@ watch(tableRows, saveToLocal, { deep: true });
     z-index: 2;
     width: 24px;
     height: 24px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid transparent;
-    border-radius: 6px;
-    box-shadow: none;
-    color: var(--yh-text-color-placeholder, var(--el-text-color-placeholder));
-    background: color-mix(in srgb, var(--yh-bg-color-container-hover, var(--el-fill-color-light)) 52%, transparent);
     cursor: pointer;
     padding: 0;
     transition:
@@ -354,13 +476,6 @@ watch(tableRows, saveToLocal, { deep: true });
     box-shadow: 0 4px 10px color-mix(in srgb, var(--yh-brand-color, var(--el-color-primary)) 18%, transparent);
     transform: translateY(-1px);
   }
-
-  .entry-pick-button.is-filled {
-    border-color: var(--yh-brand-color, var(--el-color-primary));
-    color: var(--yh-brand-color, var(--el-color-primary));
-    background: color-mix(in srgb, var(--yh-brand-color, var(--el-color-primary)) 10%, var(--yh-bg-color-container, var(--el-bg-color)));
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--yh-brand-color, var(--el-color-primary)) 10%, transparent);
-  }
 }
 
 .entry-full-name {
@@ -376,13 +491,30 @@ watch(tableRows, saveToLocal, { deep: true });
 }
 
 .entry-brief-name {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   margin-top: 4px;
   color: var(--yh-text-color-primary, var(--el-text-color-primary));
   font-size: 13px;
   font-weight: 700;
   line-height: 1.25;
   text-align: center;
-  word-break: break-all;
+
+  img {
+    width: 28px;
+    height: 28px;
+    flex: 0 0 auto;
+    border-radius: 4px;
+    object-fit: cover;
+  }
+
+  span {
+    min-width: 0;
+    word-break: break-all;
+  }
 }
 
 .entry-dropdown {
@@ -429,7 +561,6 @@ watch(tableRows, saveToLocal, { deep: true });
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
-  min-height: 44px;
   padding: 8px 10px;
   border: 1px solid transparent;
   border-radius: 7px;
@@ -449,7 +580,11 @@ watch(tableRows, saveToLocal, { deep: true });
 
   &.is-selected {
     border-color: var(--yh-brand-color, var(--el-color-primary));
-    background: color-mix(in srgb, var(--yh-brand-color, var(--el-color-primary)) 12%, var(--yh-bg-color-container, var(--el-bg-color)));
+    background: color-mix(
+      in srgb,
+      var(--yh-brand-color, var(--el-color-primary)) 12%,
+      var(--yh-bg-color-container, var(--el-bg-color))
+    );
   }
 }
 
@@ -472,6 +607,21 @@ watch(tableRows, saveToLocal, { deep: true });
     font-size: 11px;
     white-space: normal;
     word-break: break-all;
+  }
+}
+
+.entry-title {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+
+  img {
+    width: 28px;
+    height: 28px;
+    flex: 0 0 auto;
+    border-radius: 5px;
+    object-fit: cover;
   }
 }
 
