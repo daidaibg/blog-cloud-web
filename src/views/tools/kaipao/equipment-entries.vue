@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from "vue";
-import { ArrowDown, Check, Plus, RefreshLeft, Delete, Upload } from "@element-plus/icons-vue";
-import { ElMessage } from "element-plus";
+import { useRouter } from "vue-router";
+import { ArrowDown, Check, Plus, RefreshLeft, Delete, Upload, Setting, Download } from "@element-plus/icons-vue";
+import { ElMessage, ElMessageBox } from "element-plus";
+import { getZombieSavedEntryIds, postZombieSavedEntryIds } from "@/api";
+import { RouterEnum } from "@/enums";
+import { useUserStore } from "@/store";
 import G1Logo from "@/assets/img/kaipao/G/logo/G1.png";
 import G2Logo from "@/assets/img/kaipao/G/logo/G2.png";
 import G3Logo from "@/assets/img/kaipao/G/logo/G3.png";
@@ -19,11 +23,27 @@ import {
   type EquipmentPart,
   type EquipmentPartKey,
 } from "./equipment-entry-data";
+import {
+  cloneIgnoredEntryIds,
+  createEmptyIgnoredEntryIds,
+  loadEquipmentEntrySettings,
+  saveEquipmentEntrySettings,
+  sanitizeIgnoredEntryIds,
+  type EquipmentEntrySettings,
+  type IgnoredEntryIdsByPart,
+} from "./equipment-settings-storage";
 
 type EntryRow = Record<EquipmentPartKey, string>;
 
+interface EquipmentEntryExportData {
+  rows: EntryRow[];
+  settings: EquipmentEntrySettings;
+}
+
 const STORAGE_KEY = "kaipao_equipment_entry_ids";
 const DEFAULT_ROW_COUNT = 6;
+const userStore = useUserStore();
+const router = useRouter();
 
 const createEmptyRow = (): EntryRow => ({
   helmet: "",
@@ -37,9 +57,12 @@ const createEmptyRow = (): EntryRow => ({
 const createDefaultRows = () => Array.from({ length: DEFAULT_ROW_COUNT }, createEmptyRow);
 
 const tableRows = reactive<EntryRow[]>(createDefaultRows());
+const ignoredEntryIdsByPart = reactive<IgnoredEntryIdsByPart>(createEmptyIgnoredEntryIds());
 const openedCellKey = ref("");
+const importFileRef = ref<HTMLInputElement>();
 const state = reactive({
   showFullName: true,
+  syncing: false,
 });
 
 const seasonLogoMap: Record<NonNullable<EquipmentEntry["season"]>, string> = {
@@ -121,7 +144,9 @@ const selectedByPart = computed(() => {
  */
 const getOptions = (part: EquipmentPart, row: EntryRow) => {
   const currentValue = row[part.key];
+  const ignoredIds = ignoredEntryIdsByPart[part.key];
   return equipmentEntryListByPart[part.key].filter((entry) => {
+    if (ignoredIds.includes(entry.id)) return false;
     return entry.id === currentValue || !selectedByPart.value[part.key].includes(entry.id);
   });
 };
@@ -204,8 +229,31 @@ const resetRows = () => {
   tableRows.splice(0, tableRows.length, ...createDefaultRows());
 };
 
+const goSettings = () => {
+  router.push({ name: RouterEnum.XiangJiangshiKaipaoEquipmentSettings });
+};
+
 const saveToLocal = () => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(tableRows));
+};
+
+const createExportData = (): EquipmentEntryExportData => ({
+  rows: tableRows.map((row) => ({ ...row })),
+  settings: {
+    ignoredEntryIdsByPart: cloneIgnoredEntryIds(ignoredEntryIdsByPart),
+  },
+});
+
+const saveSettingsToLocal = () => {
+  saveEquipmentEntrySettings(createExportData().settings);
+};
+
+const applyIgnoredEntryIds = (settings?: Partial<EquipmentEntryExportData["settings"]>) => {
+  const ignoredMap = sanitizeIgnoredEntryIds(settings);
+
+  equipmentParts.forEach((part) => {
+    ignoredEntryIdsByPart[part.key] = ignoredMap[part.key];
+  });
 };
 
 const loadLocalRows = () => {
@@ -222,19 +270,128 @@ const loadLocalRows = () => {
   }
 };
 
-const saveToBackend = () => {
-  const payload = tableRows.map((row, index) => ({
-    rowIndex: index + 1,
-    entryIds: { ...row },
-  }));
-
-  console.log("向僵尸开炮装备词条保存 payload", payload);
-  ElMessage.success({ message: "已生成保存数据，接口待定", plain: true });
+const loadLocalSettings = () => {
+  applyIgnoredEntryIds(loadEquipmentEntrySettings());
 };
 
-onMounted(loadLocalRows);
+const applyExportData = (data: Partial<EquipmentEntryExportData>) => {
+  if (Array.isArray(data.rows)) {
+    tableRows.splice(0, tableRows.length, ...normalizeRows(data.rows));
+  }
+  applyIgnoredEntryIds(data.settings);
+  saveToLocal();
+  saveSettingsToLocal();
+};
+
+const loadBackendData = async () => {
+  if (!userStore.getIslogin || state.syncing) return;
+
+  state.syncing = true;
+  try {
+    const res = await getZombieSavedEntryIds();
+    if (res.code === 200 && res.data) {
+      applyExportData(res.data);
+    }
+  } catch (err: any) {
+    console.warn("读取向僵尸开炮装备词条接口失败", err);
+    ElMessage.warning({ message: err?.msg || "读取服务器保存数据失败，已使用本地缓存", plain: true });
+  } finally {
+    state.syncing = false;
+  }
+};
+
+const exportJson = () => {
+  const data = createExportData();
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = `kaipao-equipment-entries-${Date.now()}.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+const triggerImportJson = () => {
+  importFileRef.value?.click();
+};
+
+const importJson = async (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = "";
+  if (!file) return;
+
+  try {
+    const data = JSON.parse(await file.text()) as Partial<EquipmentEntryExportData>;
+    if (!Array.isArray(data.rows)) {
+      ElMessage.warning({ message: "导入文件缺少 rows 数据", plain: true });
+      return;
+    }
+
+    applyExportData(data);
+    ElMessage.success({ message: "导入成功", plain: true });
+  } catch (err) {
+    console.warn("导入向僵尸开炮装备词条失败", err);
+    ElMessage.error({ message: "导入失败，请检查 JSON 文件格式", plain: true });
+  }
+};
+
+const saveToBackend = async () => {
+  const payload = createExportData();
+
+  if (!userStore.getIslogin) {
+    ElMessageBox.confirm("当前未登录，可以去登录后保存，或先导出 JSON 到本地。", "保存装备词条", {
+      confirmButtonText: "去登录",
+      cancelButtonText: "导出 JSON",
+      distinguishCancelAndClose: true,
+      type: "warning",
+    })
+      .then(() => {
+        userStore.onModelLogin();
+      })
+      .catch((action) => {
+        if (action === "cancel") {
+          exportJson();
+        }
+      });
+    return;
+  }
+
+  state.syncing = true;
+  try {
+    const res = await postZombieSavedEntryIds(payload);
+    if (res.code === 200) {
+      ElMessage.success({ message: "保存成功", plain: true });
+      return;
+    }
+    ElMessage.error({ message: res.msg || "保存失败", plain: true });
+  } catch (err: any) {
+    console.warn("保存向僵尸开炮装备词条接口失败", err);
+    ElMessage.error({ message: err?.msg || "保存失败，请稍后再试", plain: true });
+  } finally {
+    state.syncing = false;
+  }
+};
+
+onMounted(() => {
+  loadLocalRows();
+  loadLocalSettings();
+  loadBackendData();
+});
 
 watch(tableRows, saveToLocal, { deep: true });
+watch(ignoredEntryIdsByPart, saveSettingsToLocal, { deep: true });
+watch(
+  () => userStore.getIslogin,
+  (isLogin) => {
+    if (isLogin) {
+      loadBackendData();
+    }
+  },
+);
 </script>
 
 <template>
@@ -242,11 +399,15 @@ watch(tableRows, saveToLocal, { deep: true });
     <section class="kaipao-toolbar">
       <div>
         <h1>向僵尸开炮装备词条表</h1>
-        <p>每个单元格保存固定词条 id，本地自动缓存；点击保存后可对接后端接口。</p>
+        <p>每个单元格保存固定词条 id，本地自动缓存；登录后可同步保存到服务器。</p>
       </div>
       <div class="toolbar-actions">
+        <input ref="importFileRef" class="import-file-input" type="file" accept="application/json,.json" @change="importJson" />
         <el-button :icon="RefreshLeft" @click="resetRows">清空</el-button>
-        <el-button type="primary" :icon="Upload" @click="saveToBackend">保存</el-button>
+        <el-button :icon="Setting" @click="goSettings">设置</el-button>
+        <el-button :icon="Download" @click="exportJson">导出</el-button>
+        <el-button :icon="Upload" @click="triggerImportJson">导入</el-button>
+        <el-button type="primary" :icon="Check" :loading="state.syncing" @click="saveToBackend">保存</el-button>
       </div>
     </section>
 
@@ -380,6 +541,10 @@ watch(tableRows, saveToLocal, { deep: true });
   gap: 10px;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+.import-file-input {
+  display: none;
 }
 
 .entry-table-wrap {
@@ -673,5 +838,6 @@ watch(tableRows, saveToLocal, { deep: true });
     width: 100%;
     justify-content: flex-start;
   }
+
 }
 </style>

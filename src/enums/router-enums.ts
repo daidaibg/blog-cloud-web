@@ -26,6 +26,7 @@ export enum RouterEnum {
     Chicken="/chicken",
     //向僵尸开炮装备词条表
     XiangJiangshiKaipaoEquipment="/xiang-jiangshi-kaipao/equipment",
+    XiangJiangshiKaipaoEquipmentSettings="/xiang-jiangshi-kaipao/equipment/settings",
     //chatGpt
     Chat="/chat",
     /**html预览 */

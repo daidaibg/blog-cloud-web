@@ -79,9 +79,10 @@ service.interceptors.response.use(
   },
   (error: AxiosError) => {
     console.log("response", error);
+    const responseData = error.response?.data as { msg?: string; message?: string } | undefined;
     let err = {
       success: false,
-      msg: "未知异常，请联系管理员！",
+      msg: responseData?.msg || responseData?.message || "未知异常，请联系管理员！",
       contnt: error,
     };
     if (JSON.stringify(error).indexOf("Network Error") != -1) {

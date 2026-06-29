@@ -150,6 +150,17 @@ const routes: Array<RouteRecordRaw> = [
           isShowHeader: true,
         },
       },
+      {
+        path: RouterEnum.XiangJiangshiKaipaoEquipmentSettings,
+        name: RouterEnum.XiangJiangshiKaipaoEquipmentSettings,
+        component: () =>
+          import(/* webpackChunkName: "tools" */ "../views/tools/kaipao/equipment-settings.vue"),
+        meta: {
+          title: "向僵尸开炮装备词条设置",
+          noSplice: true,
+          isShowHeader: true,
+        },
+      },
     ],
   },
   {
@@ -222,7 +233,7 @@ const router = createRouter({
 //htmlloading元素
 const container_nomountDom: any = document.querySelector(".container_nomount");
 // ---------------------- 路由拦截 方法 -----------------------------------//
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, from) => {
   let text = " - 搞bug";
   if (to.meta.noSplice) {
     text = "";
@@ -235,7 +246,6 @@ router.beforeEach((to, from, next) => {
     let body: any = getScrollContainer();
     body.scrollTop = 0;
   }
-  next();
 });
 // --------------------------- 路由拦截 方法---------------------------------------------- //
 router.afterEach((to, from) => {
