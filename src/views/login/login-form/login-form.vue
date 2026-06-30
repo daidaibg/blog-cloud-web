@@ -4,12 +4,13 @@ import { useUserStore } from "@/store";
 
 import type { FormInstance } from "element-plus";
 import { ElForm, ElFormItem, ElInput, ElMessage } from "element-plus";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { postLogin } from "@/api/modules/home";
 import { setLocalStorage, validatePhone } from "@/utils";
 import { StorageEnum } from "@/enums";
 
 const router = useRouter();
+const route = useRoute();
 const userStore = useUserStore();
 
 const formRef = ref<FormInstance>(); //密码登录表单
@@ -69,6 +70,16 @@ const register = () => {
   router.push("register");
   close();
 };
+const getLoginRedirect = () => {
+  const queryRedirect = Array.isArray(route.query.redirect) ? route.query.redirect[0] : route.query.redirect;
+  return userStore.getLoginRedirect || (typeof queryRedirect === "string" ? queryRedirect : "/");
+};
+const goLoginRedirect = async () => {
+  const redirect = getLoginRedirect();
+  userStore.clearLoginRedirect();
+  if (redirect === route.fullPath) return;
+  await router.push(redirect);
+};
 //获取验证码
 async function GetCode() {
   if (state.getCode) return;
@@ -123,8 +134,9 @@ const submit = (formEl: FormInstance | undefined) => {
           // 如果是弹窗形式展示的就需要关闭弹窗
           if (props.isModel) {
             close();
+            await goLoginRedirect();
           } else {
-            await router.push("/");
+            await goLoginRedirect();
           }
         } else {
           ElMessage.error({

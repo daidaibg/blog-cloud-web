@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, watch } from "vue";
+import { computed, onMounted, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
-import { ArrowLeft } from "@element-plus/icons-vue";
+import { ArrowLeft, Download, Upload } from "@element-plus/icons-vue";
+import { ElMessage } from "element-plus";
 import G1Logo from "@/assets/img/kaipao/G/logo/G1.png";
 import G2Logo from "@/assets/img/kaipao/G/logo/G2.png";
 import G3Logo from "@/assets/img/kaipao/G/logo/G3.png";
@@ -14,14 +15,21 @@ import ClothesIcon from "@/assets/img/kaipao/equipment/yifu.png";
 import { equipmentEntryListByPart, equipmentParts, type EquipmentEntry, type EquipmentPartKey } from "./equipment-entry-data";
 import {
   createEmptyIgnoredEntryIds,
+  createEquipmentEntryExportData,
+  loadEquipmentEntryRows,
   loadEquipmentEntrySettings,
+  normalizeEquipmentEntryRows,
+  saveEquipmentEntryRows,
   saveEquipmentEntrySettings,
+  sanitizeIgnoredEntryIds,
+  type EquipmentEntryExportData,
   type IgnoredEntryIdsByPart,
 } from "./equipment-settings-storage";
 
 const router = useRouter();
 
 const ignoredEntryIdsByPart = reactive<IgnoredEntryIdsByPart>(createEmptyIgnoredEntryIds());
+const importFileRef = ref<HTMLInputElement>();
 
 const partIconMap: Record<EquipmentPartKey, string> = {
   helmet: HelmetIcon,
@@ -58,10 +66,67 @@ const loadSettings = () => {
   });
 };
 
-const saveSettings = () => {
+const getShowFullNameSetting = (settings?: Partial<EquipmentEntryExportData["settings"]>) => {
+  return typeof settings?.showFullName === "boolean" ? settings.showFullName : loadEquipmentEntrySettings().showFullName;
+};
+
+const saveSettings = (settings?: Partial<EquipmentEntryExportData["settings"]>) => {
   saveEquipmentEntrySettings({
     ignoredEntryIdsByPart,
+    showFullName: getShowFullNameSetting(settings),
   });
+};
+
+const applyIgnoredEntryIds = (settings?: Partial<EquipmentEntryExportData["settings"]>) => {
+  const ignoredMap = settings ? sanitizeIgnoredEntryIds(settings) : loadEquipmentEntrySettings().ignoredEntryIdsByPart;
+
+  equipmentParts.forEach((part) => {
+    ignoredEntryIdsByPart[part.key] = ignoredMap[part.key];
+  });
+  saveSettings(settings);
+};
+
+const exportJson = () => {
+  const data = createEquipmentEntryExportData(loadEquipmentEntryRows(), {
+    ignoredEntryIdsByPart,
+    showFullName: getShowFullNameSetting(),
+  });
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = `kaipao-equipment-config-${Date.now()}.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+const triggerImportJson = () => {
+  importFileRef.value?.click();
+};
+
+const importJson = async (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = "";
+  if (!file) return;
+
+  try {
+    const data = JSON.parse(await file.text()) as Partial<EquipmentEntryExportData>;
+    if (!Array.isArray(data.rows)) {
+      ElMessage.warning({ message: "导入文件缺少 rows 数据", plain: true });
+      return;
+    }
+
+    saveEquipmentEntryRows(normalizeEquipmentEntryRows(data.rows));
+    applyIgnoredEntryIds(data.settings);
+    ElMessage.success({ message: "导入成功", plain: true });
+  } catch (err) {
+    console.warn("导入向僵尸开炮装备配置失败", err);
+    ElMessage.error({ message: "导入失败，请检查 JSON 文件格式", plain: true });
+  }
 };
 
 onMounted(loadSettings);
@@ -76,7 +141,12 @@ watch(ignoredEntryIdsByPart, saveSettings, { deep: true });
         <h1>装备词条设置</h1>
         <p>设置会自动保存到本地，保存装备词条时也会一起带给后端接口。</p>
       </div>
-      <el-button :icon="ArrowLeft" @click="router.back()">返回</el-button>
+      <div class="settings-toolbar-actions">
+        <input ref="importFileRef" class="import-file-input" type="file" accept="application/json,.json" @change="importJson" />
+        <el-button :icon="Download" @click="exportJson">导出 JSON</el-button>
+        <el-button :icon="Upload" @click="triggerImportJson">导入 JSON</el-button>
+        <el-button :icon="ArrowLeft" @click="router.back()">返回</el-button>
+      </div>
     </section>
 
     <section class="settings-layout">
@@ -164,6 +234,17 @@ watch(ignoredEntryIdsByPart, saveSettings, { deep: true });
     color: var(--yh-text-color-secondary, var(--el-text-color-secondary));
     font-size: 14px;
   }
+}
+
+.settings-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.import-file-input {
+  display: none;
 }
 
 .settings-layout {
@@ -361,6 +442,11 @@ watch(ignoredEntryIdsByPart, saveSettings, { deep: true });
     h1 {
       font-size: 20px;
     }
+  }
+
+  .settings-toolbar-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .settings-layout {

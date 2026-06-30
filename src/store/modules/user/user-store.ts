@@ -10,6 +10,7 @@ export const useUserStore = defineStore("useUserStore", {
     state:():userStoreType=> ({
         isLogin: false,//是否登录
         modelLoginShow: false,
+        loginRedirect: "",
         userData:{
             nickName:"",//昵称
         },
@@ -23,6 +24,9 @@ export const useUserStore = defineStore("useUserStore", {
         },
         getModelLoginShow():boolean{
             return this.modelLoginShow
+        },
+        getLoginRedirect():string{
+            return this.loginRedirect
         }
     },
     actions: {
@@ -38,12 +42,16 @@ export const useUserStore = defineStore("useUserStore", {
             clearLocalStorage(StorageEnum.GB_TOKEN_STORE)
         },
         //打开登陆弹窗
-        onModelLogin() {
+        onModelLogin(redirect?: string) {
+            this.loginRedirect = redirect || window.location.pathname + window.location.search + window.location.hash
             this.modelLoginShow = true
         },
         //关闭登陆弹窗
         offModelLogin() {
             this.modelLoginShow = false
+        },
+        clearLoginRedirect() {
+            this.loginRedirect = ""
         },
         getUserInfo(){
             getUserInfo().then((res:any)=>{

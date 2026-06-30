@@ -1,11 +1,24 @@
 <script setup lang='ts'>
 import { useUserStore } from '@/store'
 import { ElPopover } from 'element-plus'
-import { useRouter } from "vue-router"
+import { useRoute, useRouter } from "vue-router"
 import {RouterEnum} from "@/enums"
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
+const login = () => {
+    router.push({
+        path: "/login",
+        query: {
+            redirect: route.fullPath,
+        },
+    })
+}
 const layout = () => {
+    if(!userStore.getIslogin){
+        login()
+        return
+    }
    userStore.userOffline()
     router.push("/login")
 }

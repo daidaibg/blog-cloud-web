@@ -1,17 +1,27 @@
+/** 装备部位 key，和表格列、本地缓存字段一一对应。 */
 export type EquipmentPartKey = "helmet" | "clothes" | "boots" | "bracer" | "pants" | "gloves";
 
+/** 单条装备词条数据。 */
 export interface EquipmentEntry {
+  /** 词条唯一 id，本地缓存、云端保存和导入导出都只保存这个值。 */
   id: string;
+  /** 词条完整描述，用于详情展示。 */
   name: string;
+  /** 较短的展示名，用于表格单元格和下拉列表摘要。 */
   shortName?: string;
+  /** 赛季标记，有值时会在界面上展示对应赛季图标。 */
   season?: "G1" | "G2" | "G3";
 }
 
+/** 装备部位元信息，用于渲染表头和按部位读取词条。 */
 export interface EquipmentPart {
+  /** 部位 key，对应 EquipmentEntryRow 里的字段名。 */
   key: EquipmentPartKey;
+  /** 页面展示的中文部位名。 */
   label: string;
 }
 
+/** 表格固定展示的装备部位顺序。 */
 export const equipmentParts: EquipmentPart[] = [
   { key: "helmet", label: "头盔" },
   { key: "clothes", label: "衣服" },
@@ -21,21 +31,26 @@ export const equipmentParts: EquipmentPart[] = [
   { key: "gloves", label: "手套" },
 ];
 
+/**
+ * 按装备部位分组的全量词条列表。
+ *
+ * 注意：词条 id 需要在所有部位中保持唯一，因为本地缓存、云端配置和导入导出都通过 id 回查词条详情。
+ */
 export const equipmentEntryListByPart: Record<EquipmentPartKey, EquipmentEntry[]> = {
   helmet: [
-    { id: "10000", name: "进入战斗攻击力+2%。无限宝石：集齐3个时，攻击力额外+6%；集齐6个时，攻击力额外+12%", shortName: "进入战斗攻击力+2%", season: "G3" },
+    { id: "10000", name: "进入战斗攻击力+2%。无限宝石：集齐3个时，攻击力额外+6%；集齐6个时，攻击力额外+12%", shortName: "无限宝石攻击力+2%", season: "G3" },
     { id: "10001", name: "坍缩领域命中目标时造成其2%最大生命值的深度伤害并扣除对应生命上限", shortName: "坍缩深度伤害", season: "G3" },
     { id: "10002", name: "达到 7 和 14 级时，额外进行一次词条选取", shortName: "7/14级额外词条", season: "G2" },
     { id: "10003", name: "龙体通过释放技能获得 [巨龙之心] 上限 + 10 层", shortName: "龙心上限", season: "G2" },
     { id: "10004", name: "龙体的技能冷却 - 25%", shortName: "龙体冷却", season: "G2" },
-    { id: "10005", name: "每次发射子弹时，有15%概率不消耗子弹", shortName: "每次发射子弹时", season: "G2"  },
+    { id: "10005", name: "每次发射子弹时，有15%概率不消耗子弹", shortName: "概率不消耗子弹", season: "G1"  },
     { id: "10006", name: "温压弹碰到墙壁弹射次数+3" , season: "G1"},
     { id: "10007", name: "生化矩阵伤害+24%，范围+24%" , season: "G1"},
     { id: "10008", name: "时空裂隙对目标累计造成20次伤害后，该目标失效（屏蔽被动），持续10秒（内置冷却60秒）", shortName: "裂隙失效", season: "G3" },
     { id: "10009", name: "当幸运值为18、19、20时，等同于21幸运值", shortName: "当幸运值为18、19", season: "G3" },
     { id: "10010", name: "电极柱伤害+42%，持续时间+3秒" },
     { id: "10011", name: "进入关卡时立即选择1次技能", shortName: "头选" },
-    { id: "10012", name: "暴击时额外追加目标最大生命值8%伤害（最大伤害值为攻击力的500%)", shortName: "暴百" },
+    { id: "10012", name: "暴击时额外追加目标最大生命值8%伤害（最大伤害值为攻击力的500%)", shortName: "百暴" },
     { id: "10013", name: "空投轰炸命中感电状态下的目标，造成8%生命值上限伤害", shortName: "空百" },
     { id: "10014", name: "击杀精英和首领后防线回血14%" },
     { id: "10015", name: "攻击+70" },
@@ -56,9 +71,9 @@ export const equipmentEntryListByPart: Record<EquipmentPartKey, EquipmentEntry[]
     { id: "10030", name: "使怪物身上已有的负面状态持续时间延长50%", shortName: "负面延长50%" },
     { id: "10031", name: "枪械伤害+35%" },
     { id: "10032", name: "枪械穿透+1，伤害+20%" },
-    { id: "10033", name: "造成伤害时额外追加目标最大生命值4%的伤害(最大伤害值为攻击力的300%)", shortName: "造成伤害时额外追加目" },
+    { id: "10033", name: "造成伤害时额外追加目标最大生命值4%的伤害(最大伤害值为攻击力的300%)", shortName: "百伤" },
     { id: "10034", name: "防线血量+1400，受到伤害-14" },
-    { id: "10035", name: "防线免疫前7次受到的伤害，并对怪物造成70%角色攻击力的伤害", shortName: "防线免疫7次" },
+    { id: "10035", name: "防线免疫前7次受到的伤害，并对怪物造成70%角色攻击力的伤害", shortName: "防免7" },
     { id: "10036", name: "防线每损失4%血量就释放—辆装甲车" },
     { id: "10037", name: "防线首次血量低于25%时，将在接下来的6秒内免疫所有伤害", shortName: "防线低血免伤" },
     { id: "10038", name: "温压弹爆炸伤害+28%，范围+21%" },
@@ -76,7 +91,7 @@ export const equipmentEntryListByPart: Record<EquipmentPartKey, EquipmentEntry[]
     { id: "10050", name: "燃油弹持续时间+50%" },
   ],
   clothes: [
-    { id: "20000", name: "进入战斗攻击力+2%。无限宝石：集齐3个时，攻击力额外+6%；集齐6个时，攻击力额外+12%", shortName: "进战攻击", season: "G3" },
+    { id: "20000", name: "进入战斗攻击力+2%。无限宝石：集齐3个时，攻击力额外+6%；集齐6个时，攻击力额外+12%", shortName: "无限宝石攻击力+2%", season: "G3" },
     { id: "20001", name: "坍缩领域持续时间+30%", season: "G3" },
     { id: "20002", name: "跃迁电子及所有衍生技能都会使敌人燃烧，在5秒内造成2.5%最大生命值伤害", shortName: "跃迁百", season: "G3" },
     { id: "20003", name: "空投轰炸的伤害+42%，范围+28%" },
@@ -108,7 +123,7 @@ export const equipmentEntryListByPart: Record<EquipmentPartKey, EquipmentEntry[]
     { id: "20030", name: "枪械齐射+1，伤害+10%" },
     { id: "20031", name: "每学习一个新技能，造成伤害+18%" },
     { id: "20032", name: "防线血量+1400，受到伤害-14" },
-    { id: "20033", name: "防线免疫前7次受到的伤害，并对怪物造成70%角色攻击力的伤害", shortName: "防线免疫前7次受到的伤害" },
+    { id: "20033", name: "防线免疫前7次受到的伤害，并对怪物造成70%角色攻击力的伤害", shortName: "防免7" },
     { id: "20034", name: "防线每损失20%血量就释放7辆装甲车" },
     { id: "20035", name: "温压弹爆炸伤害+28%，范围+21%" },
     { id: "20036", name: "温压弹附加4秒燃烧效果" },
@@ -127,7 +142,7 @@ export const equipmentEntryListByPart: Record<EquipmentPartKey, EquipmentEntry[]
     { id: "20049", name: "燃油弹持续时间+50%" },
   ],
   boots: [
-    { id: "30000", name: "进入战斗攻击力+2%。无限宝石：集齐3个时，攻击力额外+6%；集齐6个时，攻击力额外+12%", shortName: "进入战斗攻击", season: "G3" },
+    { id: "30000", name: "进入战斗攻击力+2%。无限宝石：集齐3个时，攻击力额外+6%；集齐6个时，攻击力额外+12%", shortName: "无限宝石攻击力+2%", season: "G3" },
     { id: "30001", name: "幸运弹球所需触发次数-1", season: "G3" },
     { id: "30002", name: "能量恢复效率 + 30%", season: "G2" },
     { id: "30003", name: "弹夹数量上限增加 + 25%", season: "G2" },
@@ -160,7 +175,7 @@ export const equipmentEntryListByPart: Record<EquipmentPartKey, EquipmentEntry[]
     { id: "30030", name: "对怪物造成伤害后，有4%概率将其传送回出发点", shortName: "概率传送回起点" },
     { id: "30031", name: "攻击满血量怪物时必定造成暴击" },
     { id: "30032", name: "防线血量+1400，受到伤害-14" },
-    { id: "30033", name: "防线免疫前7次受到的伤害，并对怪物造成60%角色攻击力的伤害", shortName: "防线免疫7次" },
+    { id: "30033", name: "防线免疫前7次受到的伤害，并对怪物造成60%角色攻击力的伤害", shortName: "防免7" },
     { id: "30034", name: "对距离防线400距离的怪+42%伤害" },
     { id: "30035", name: "温压弹爆炸伤害+28%，范围+21%" },
     { id: "30036", name: "温压弹爆炸后产生持续5秒的燃烧区域", shortName: "温压弹燃烧区域" },
@@ -177,7 +192,7 @@ export const equipmentEntryListByPart: Record<EquipmentPartKey, EquipmentEntry[]
     { id: "30047", name: "燃油弹持续时间+50%" },
   ],
   bracer: [
-    { id: "50000", name: "进入战斗攻击力+2%。无限宝石：集齐3个时，攻击力额外+6%；集齐6个时，攻击力额外+12%", shortName: "进入战斗攻击力+2%", season: "G3" },
+    { id: "50000", name: "进入战斗攻击力+2%。无限宝石：集齐3个时，攻击力额外+6%；集齐6个时，攻击力额外+12%", shortName: "无限宝石攻击力+2%", season: "G3" },
     { id: "50001", name: "时空裂隙触发坍缩领域的次数-1", shortName: "裂隙坍缩-1", season: "G3" },
     { id: "50002", name: "防线受击后，攻击力提升 x%，持续 5 秒", shortName: "防线受击后", season: "G2" },
     { id: "50003", name: "机械蜕变时长-30%", season: "G2" },
@@ -188,7 +203,6 @@ export const equipmentEntryListByPart: Record<EquipmentPartKey, EquipmentEntry[]
     { id: "50008", name: "幸运值下限变为5" , season: "G3"},
     { id: "50009", name: "每点幸运值增加多维弹球伤害12%", shortName: "幸运弹球增伤", season: "G3" },
     { id: "50010", name: "干冰弹伤害+20%，冻结时间+1秒" },
-    { id: "50011", name: "电极柱+1，伤害+10%" },
     { id: "50012", name: "攻击+70" },
     { id: "50013", name: "暴击率+7%" },
     { id: "50014", name: "温压弹伤害+42%" },
@@ -211,7 +225,7 @@ export const equipmentEntryListByPart: Record<EquipmentPartKey, EquipmentEntry[]
     { id: "50031", name: "暴击时，额外追加目标最大生命值8%伤害(最大伤害值为攻击力的500%)", shortName: "暴击时" },
     { id: "50032", name: "释放技能有70%概率无视怪物的伤害减免效果", shortName: "技能无视减免" },
     { id: "50033", name: "防线血量+1400，受到伤害-14" },
-    { id: "50034", name: "防线免疫前7次受到的伤害，并对怪物造成70%角色攻击力的伤害", shortName: "防线免疫7次" },
+    { id: "50034", name: "防线免疫前7次受到的伤害，并对怪物造成70%角色攻击力的伤害", shortName: "防免7" },
     { id: "50035", name: "防线血量不足30%时伤害+110%" },
     { id: "50036", name: "每击杀—只怪防线回血5" },
     { id: "50037", name: "温压弹命中怪物后会弹射出一个强化的温压弹", shortName: "温压强化弹" },
@@ -223,7 +237,7 @@ export const equipmentEntryListByPart: Record<EquipmentPartKey, EquipmentEntry[]
     { id: "50043", name: "压缩气刃伤害提高28%，击退效果提高28%", shortName: "压缩气刃伤害提高28%" },
     { id: "50044", name: "空投轰炸的伤害+42%，范围+28%" },
     { id: "50045", name: "装甲车伤害+42%，击退效果+28%" },
-    { id: "50046", name: "冰暴发生器造成伤害时有30%概率附加无视冻结抗性的冻结", shortName: "冰暴无视冻结抗性" },
+    { id: "50046", name: "冰暴发生器造成伤害时有30%概率附加无视冻结抗性的冻结", shortName: "冰暴深度冻结" },
     { id: "50047", name: "跃迁电子弹射次数+5" },
     { id: "50048", name: "跃迁电子可以伤害路径上的敌人，造成30%攻击力的伤害", shortName: "跃迁路径伤害" },
     { id: "50049", name: "无人机每次碰到墙壁反弹时，造成的伤害增加8%，最多40%", shortName: "无人机反弹增伤" },
@@ -231,7 +245,7 @@ export const equipmentEntryListByPart: Record<EquipmentPartKey, EquipmentEntry[]
     { id: "50051", name: "燃油弹伤害+28%，减速效果+14%" },
   ],
   pants: [
-    { id: "40000", name: "进入战斗攻击力+2%。无限宝石：集齐3个时，攻击力额外+6%；集齐6个时，攻击力额外+12%", shortName: "进入战斗攻击", season: "G3" },
+    { id: "40000", name: "进入战斗攻击力+2%。无限宝石：集齐3个时，攻击力额外+6%；集齐6个时，攻击力额外+12%", shortName: "无限宝石攻击力+2%", season: "G3" },
     { id: "40001", name: "压缩气刃命中处于燃烧状态的目标时，在3秒内额外造成3%最大生命值伤害", shortName: "气刃百", season: "G3" },
     { id: "40002", name: "冰链数量 + 4", season: "G2" },
     { id: "40003", name: "生化矩阵造成伤害时额外附加1层基因污染，额外提供500层污染上限", shortName: "矩阵污染上限" , season: "G1"},
@@ -262,10 +276,10 @@ export const equipmentEntryListByPart: Record<EquipmentPartKey, EquipmentEntry[]
     { id: "40028", name: "所有附带穿透属性的技能，穿透+3" },
     { id: "40029", name: "枪械伤害+35%" },
     { id: "40030", name: "枪械每射击120次时，释放一次持续7秒的无限火力(攻速翻倍，无视弹夹)", shortName: "枪械无限火力" },
-    { id: "40031", name: "造成伤害时有3%概率秒杀怪物(对精英和首领无效)", shortName: "小怪秒杀" },
+    { id: "40031", name: "造成伤害时有3%概率秒杀怪物(对精英和首领无效)", shortName: "秒杀" },
     { id: "40032", name: "暴击时，额外追加目标最大生命值8%伤害(最大伤害值为攻击力的500%)", shortName: "暴击追加生命伤害" },
     { id: "40033", name: "防线血量+1400，受到伤害-14" },
-    { id: "40034", name: "防线免疫前7次受到的伤害，并对怪物造70%角色攻击力的伤害", shortName: "防线免疫7次" },
+    { id: "40034", name: "防线免疫前7次受到的伤害，并对怪物造70%角色攻击力的伤害", shortName: "防免7" },
     { id: "40035", name: "防线血量不足30%时伤害+110%" },
     { id: "40036", name: "对距离防线400距离的怪+42%伤害" },
     { id: "40037", name: "温压弹击杀怪物时有100%概率生成一个火花", shortName: "温压击杀火花" },
@@ -275,16 +289,15 @@ export const equipmentEntryListByPart: Record<EquipmentPartKey, EquipmentEntry[]
     { id: "40041", name: "压缩气刃伤害提高28%，击退效果提高28%" },
     { id: "40042", name: "压缩气刃命中冰冻敌人时，飞溅4枚造成25%攻击力伤害的小冰弹，并且小冰弹冻结怪物0.5秒", shortName: "气刃冰冻飞溅" },
     { id: "40043", name: "空投轰炸的伤害+42%，范围+28%" },
-    { id: "40044", name: "导弹落地爆炸后向溅射出2枚碎片造成30%攻击力的伤害", shortName: "导弹溅射碎片" },
     { id: "40045", name: "装甲车伤害+42%，击退效果+28%" },
     { id: "40046", name: "跃迁电子在命中怪物时有30%的慨率从怪物位置释放一条无强化的跃迁电子", shortName: "跃迁电子额外释放" },
-    { id: "40047", name: "旋风加农命中燃烧的怪物时，在3秒内其燃烧状态会额外造成4%最大生命值伤害", shortName: "旋风燃烧追伤" },
+    { id: "40047", name: "旋风加农命中燃烧的怪物时，在3秒内其燃烧状态会额外造成4%最大生命值伤害", shortName: "风百" },
     { id: "40048", name: "无人机在运行过程中速度+50%" },
     { id: "40049", name: "无人机运行过程中每击杀1名敌人冷却时间减少0.1s", shortName: "无人机击杀减冷却" },
     { id: "40050", name: "燃油弹伤害+28%，减速效果+14%" },
   ],
   gloves: [
-    { id: "60000", name: "进入战斗攻击力+2%。无限宝石：集齐3个时，攻击力额外+6%；集齐6个时，攻击力额外+12%", shortName: "进入战斗攻击", season: "G3" },
+    { id: "60000", name: "进入战斗攻击力+2%。无限宝石：集齐3个时，攻击力额外+6%；集齐6个时，攻击力额外+12%", shortName: "无限宝石攻击力+2%", season: "G3" },
     { id: "60001", name: "射速+20%", season: "G3" },
     { id: "60002", name: "幸运弹球及其衍生伤害命中目标时造成生命上限1%深度伤害", shortName: "弹球深度幸运百", season: "G3" },
     { id: "60003", name: "枪械子弹碰到墙壁弹射次数 + 2", season: "G2" },
@@ -319,7 +332,7 @@ export const equipmentEntryListByPart: Record<EquipmentPartKey, EquipmentEntry[]
     { id: "60032", name: "暴击时，额外追加目标最大生命值8%伤害(最大伤害值为攻击力的500%)", shortName: "暴击追加生命伤害" },
     { id: "60033", name: "释放技能时有6%概率额外释放一次" },
     { id: "60034", name: "防线血量+1400，受到伤害-14" },
-    { id: "60035", name: "防线免疫前7次受到的伤害，并对怪物造成70%角色攻击力的伤害", shortName: "防线免疫7次" },
+    { id: "60035", name: "防线免疫前7次受到的伤害，并对怪物造成70%角色攻击力的伤害", shortName: "防免7" },
     { id: "60036", name: "防线血量不足30%时伤害+110%" },
     { id: "60037", name: "对距离防线400距离的怪+42%伤害" },
     { id: "60038", name: "温压弹附带的燃烧效果追加目标最大生命值2%的伤害", shortName: "温百" },
