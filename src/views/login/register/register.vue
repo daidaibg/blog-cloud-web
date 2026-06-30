@@ -146,7 +146,7 @@ async function GetCode() {
   if (state.getCode) return;
   state.getCode = true;
   state.countdown = "发送中...";
-  await getCaptchaEmail({
+  getCaptchaEmail({
     email: state.loginForm.email,
   }).then((res: any) => {
     if (res.code === 200) {
@@ -158,6 +158,10 @@ async function GetCode() {
       if (res.msg.indexOf("绑定") != -1) {
       }
     }
+  }).catch((err: any) => {
+    state.countdown = "重新获取";
+    state.getCode = false;
+    ElMessage.error({ message: err?.msg || "验证码发送失败，请稍后重试", plain: true });
   });
 }
 function sendeSuccess() {

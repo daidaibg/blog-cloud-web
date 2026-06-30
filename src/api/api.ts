@@ -13,7 +13,7 @@ const CancelToken = axios.CancelToken;
 
 const service: AxiosInstance = axios.create({
   // 超时
-  timeout: 10000,
+  timeout: 60000,
   withCredentials: false, // 禁用 Cookie 等信息
   headers: {
     "Content-Type": "application/json;chartset=utf-8",
@@ -134,6 +134,7 @@ export const requestPost = async <T = Params, R = Params>(
   try {
     const response = await service.post<T, AxiosResponse<R>>(`${baseUrl}${url}`, encParams, {
       headers,
+      timeout: config?.timeout,
     });
     return response.data;
   } catch (error) {

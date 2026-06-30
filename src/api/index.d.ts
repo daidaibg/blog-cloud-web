@@ -20,4 +20,5 @@ export interface Config {
     cancel?:Function,
     enc?:boolean,
     'Content-Type'?: string,
+    timeout?: number,
 }
