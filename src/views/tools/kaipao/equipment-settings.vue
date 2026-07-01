@@ -131,7 +131,7 @@ const importJson = async (event: Event) => {
 
 onMounted(loadSettings);
 
-watch(ignoredEntryIdsByPart, saveSettings, { deep: true });
+watch(ignoredEntryIdsByPart, ()=>saveSettings( ), { deep: true });
 </script>
 
 <template>
@@ -177,7 +177,7 @@ watch(ignoredEntryIdsByPart, saveSettings, { deep: true });
             <el-checkbox-group
               v-model="ignoredEntryIdsByPart[part.key]"
               class="ignored-entry-list"
-              @change="saveSettings">
+              @change="saveSettings()">
               <el-checkbox v-for="entry in equipmentEntryListByPart[part.key]" :key="entry.id" :value="entry.id">
                 <span class="ignored-entry-option">
                   <span class="ignored-entry-title">

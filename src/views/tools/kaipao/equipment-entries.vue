@@ -36,6 +36,7 @@ import {
   normalizeEquipmentEntryRows,
   saveEquipmentEntryRows,
   saveEquipmentEntrySettings,
+  defaultSettings,
   type EquipmentEntryExportData,
   type EquipmentEntryRow,
   sanitizeIgnoredEntryIds,
@@ -243,7 +244,7 @@ const saveSettingsToLocal = () => {
 
 const applyIgnoredEntryIds = (settings?: Partial<EquipmentEntryExportData["settings"]>) => {
   const ignoredMap = sanitizeIgnoredEntryIds(settings);
-
+console.log(111,ignoredMap,settings);
   equipmentParts.forEach((part) => {
     ignoredEntryIdsByPart[part.key] = ignoredMap[part.key];
   });
@@ -259,17 +260,33 @@ const loadLocalSettings = () => {
   state.showFullName = settings.showFullName;
 };
 
+const applyDefaultConfig = () => {
+  tableRows.splice(0, tableRows.length, ...createDefaultEquipmentEntryRows());
+  applyIgnoredEntryIds(defaultSettings);
+  state.showFullName = defaultSettings.showFullName;
+};
+
 const loadInitialConfig = async () => {
   state.suppressLocalSave = true;
   state.hasLocalConfig = hasEquipmentEntryLocalConfig();
-  loadLocalRows();
-  loadLocalSettings();
-  await nextTick();
-  state.suppressLocalSave = false;
 
-  if (!state.hasLocalConfig && userStore.getIslogin) {
-    const hasCloudConfig = await loadBackendData(true, "读取云端配置失败，已使用默认本地配置");
-    state.hasLocalConfig = hasCloudConfig === true || hasEquipmentEntryLocalConfig();
+  try {
+    if (state.hasLocalConfig) {
+      loadLocalRows();
+      loadLocalSettings();
+      return;
+    }
+
+    if (userStore.getIslogin) {
+      const hasCloudConfig = await loadBackendData(true, "读取云端配置失败，已使用默认配置");
+      state.hasLocalConfig = hasCloudConfig === true || hasEquipmentEntryLocalConfig();
+      if (hasCloudConfig) return;
+    }
+
+    applyDefaultConfig();
+  } finally {
+    await nextTick();
+    state.suppressLocalSave = false;
   }
 };
 
@@ -287,6 +304,9 @@ const applyExportData = (data: Partial<EquipmentEntryExportData>, persistLocal =
   }
 };
 
+/**
+ * 加载在线配置
+ */
 const loadBackendData = async (persistLocal = true, warningMessage = "读取服务器保存数据失败，已使用本地缓存") => {
   if (!userStore.getIslogin || state.syncing) return false;
 
@@ -307,18 +327,24 @@ const loadBackendData = async (persistLocal = true, warningMessage = "读取服�
   }
 };
 
+/**
+ * 从云端同步装备词条
+ */
 const useCloudConfig = async () => {
   if (!userStore.getIslogin || state.syncing) return;
 
-  clearEquipmentEntryLocalConfig();
   state.hasLocalConfig = false;
   state.suppressLocalSave = true;
   try {
-    tableRows.splice(0, tableRows.length, ...createDefaultEquipmentEntryRows());
-    applyIgnoredEntryIds();
-    state.showFullName = true;
+    // tableRows.splice(0, tableRows.length, ...createDefaultEquipmentEntryRows());
+    // applyIgnoredEntryIds();
+    // state.showFullName = true;
     const hasCloudConfig = await loadBackendData(false, "读取云端配置失败，本地配置已清空");
     if (hasCloudConfig === null) return;
+    if (!hasCloudConfig) {
+      applyDefaultConfig();
+    }
+    clearEquipmentEntryLocalConfig();
     ElMessage.success({ message: hasCloudConfig ? "已切换为云端配置" : "本地配置已清空，暂无云端配置", plain: true });
   } finally {
     state.suppressLocalSave = false;
@@ -536,9 +562,18 @@ watch(
   () => userStore.getIslogin,
   (isLogin) => {
     if (isLogin && !state.hasLocalConfig) {
-      loadBackendData(true, "读取云端配置失败，已使用默认本地配置").then((hasCloudConfig) => {
-        state.hasLocalConfig = hasCloudConfig === true || hasEquipmentEntryLocalConfig();
-      });
+      state.suppressLocalSave = true;
+      loadBackendData(true, "读取云端配置失败，已使用默认配置")
+        .then((hasCloudConfig) => {
+          state.hasLocalConfig = hasCloudConfig === true || hasEquipmentEntryLocalConfig();
+          if (!hasCloudConfig) {
+            applyDefaultConfig();
+          }
+        })
+        .finally(async () => {
+          await nextTick();
+          state.suppressLocalSave = false;
+        });
     }
   },
 );
@@ -562,7 +597,7 @@ watch(
           v-if="userStore.getIslogin"
           class="toolbar-3d-button is-cloud"
           :icon="Cloudy"
-          title="清空本地缓存并展示云端配置"
+          title="展示云端配置"
           :loading="state.syncing"
           @click="useCloudConfig">
           云端配置
