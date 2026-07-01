@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       vue(),
       tailwindcss(),
-      ElementPlus(),
+      ElementPlus({}),
       AutoImport({
         resolvers: [ElementPlusResolver()],
       }),
@@ -37,23 +37,16 @@ export default defineConfig(({ mode }) => {
       port: 8118,
       open: false,
       strictPort: false,
-      // proxy: { // 代理
-      // 字符串简写写法
-      // '/foo': 'http://localhost:4567/foo',
-      // 选项写法
-      // '/api': {
-      //   target: 'http://jsonplaceholder.typicode.com',
-      //   changeOrigin: true,
-      //   rewrite: (path) => path.replace(/^\/api/, '')
-      // },
-      // 正则表达式写法
-      // '^/app/.*': {
-      //   target: 'http://www.xihuanmantou.cn:19527/app',
-      //   changeOrigin: true,
-      //   rewrite: (path) => path.replace(/^\/fallback/, '')
-      // }
+      proxy: env.VITE_API_PROXY_TARGET
+        ? {
+            "/api": {
+              target: env.VITE_API_PROXY_TARGET,
+              changeOrigin: true,
+              rewrite: (path) => path.replace(/^\/api/, ""),
+            },
+          }
+        : undefined,
 
-      // }
     },
     resolve: {
       alias: {
