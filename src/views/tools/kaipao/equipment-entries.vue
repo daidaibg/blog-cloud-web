@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { ArrowDown, Check, Plus, RefreshLeft, Delete, Setting, Download, Hide, Cloudy, Top, Bottom } from "@element-plus/icons-vue";
+import { ArrowDown, Check, Plus, RefreshLeft, Delete, Setting, Download, Hide, Cloudy, Top, Bottom, Edit } from "@element-plus/icons-vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { getZombieSavedEntryIds, postZombieSavedEntryIds } from "@/api";
 import { RouterEnum } from "@/enums";
@@ -54,6 +54,7 @@ const tableRows = reactive<EntryRow[]>(createDefaultEquipmentEntryRows());
 const ignoredEntryIdsByPart = reactive<IgnoredEntryIdsByPart>(createEmptyIgnoredEntryIds());
 const openedCellKey = ref("");
 const state = reactive({
+  isEditing: false,
   showFullName: true,
   syncing: false,
   exportingImage: false,
@@ -520,7 +521,7 @@ const saveToBackend = async () => {
       .then(() => {
         userStore.onModelLogin(route.fullPath);
       });
-    return;
+    return false;
   }
 
   state.syncing = true;
@@ -528,14 +529,29 @@ const saveToBackend = async () => {
     const res = await postZombieSavedEntryIds(payload);
     if (res.code === 200) {
       ElMessage.success({ message: "保存成功", plain: true });
-      return;
+      return true;
     }
     ElMessage.error({ message: res.msg || "保存失败", plain: true });
+    return false;
   } catch (err: any) {
     console.warn("保存向僵尸开炮装备词条接口失败", err);
     ElMessage.error({ message: err?.msg || "保存失败，请稍后再试", plain: true });
+    return false;
   } finally {
     state.syncing = false;
+  }
+};
+
+const handleEditSave = async () => {
+  if (!state.isEditing) {
+    state.isEditing = true;
+    return;
+  }
+
+  const isSaved = await saveToBackend();
+  if (isSaved) {
+    state.isEditing = false;
+    openedCellKey.value = "";
   }
 };
 
@@ -584,7 +600,7 @@ watch(
     <section class="kaipao-toolbar">
       <div>
         <h1>向僵尸开炮装备词条表</h1>
-        <p>每个单元格保存固定词条 id，本地自动缓存；登录后可同步保存到服务器。</p>
+        <p>数据优先展示逻辑：本地配置优先，其次读取云端配置，最后使用默认配置。</p>
       </div>
       <div class="toolbar-actions">
         <div class="detail-toggle toolbar-3d-control">
@@ -611,19 +627,20 @@ watch(
           图片
         </el-button>
         <el-button
-          class="toolbar-3d-button is-save"
+          class="toolbar-3d-button"
+          :class="state.isEditing ? 'is-save' : 'is-edit'"
           type="primary"
-          :icon="Check"
-          title="保存到服务器"
+          :icon="state.isEditing ? Check : Edit"
+          :title="state.isEditing ? '保存到服务器' : '编辑配置'"
           :loading="state.syncing"
-          @click="saveToBackend">
-          保存
+          @click="handleEditSave">
+          {{ state.isEditing ? "保存" : "编辑" }}
         </el-button>
       </div>
     </section>
 
     <section class="entry-table-wrap">
-      <table class="entry-table" :class="{ 'is-compact': !state.showFullName }">
+      <table class="entry-table" :class="{ 'is-compact': !state.showFullName, 'is-editing': state.isEditing }">
         <thead>
           <tr>
             <th class="index-column">序号</th>
@@ -634,6 +651,7 @@ watch(
                   <span>{{ part.label }}</span>
                 </span>
                 <el-button
+                  v-if="state.isEditing"
                   class="part-clear-button"
                   :icon="Delete"
                   circle
@@ -644,7 +662,7 @@ watch(
                   @click="clearPart(part)" />
               </span>
             </th>
-            <th class="action-column">操作</th>
+            <th v-if="state.isEditing" class="action-column">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -652,6 +670,7 @@ watch(
             <td class="index-column">{{ rowIndex + 1 }}</td>
             <td v-for="part in equipmentParts" :key="part.key" class="entry-cell">
               <el-popover
+                v-if="state.isEditing"
                 :visible="openedCellKey === getCellKey(rowIndex, part.key)"
                 :width="340"
                 trigger="click"
@@ -720,7 +739,7 @@ watch(
                 :title="getEntry(row[part.key])?.name">
                 {{ getEntry(row[part.key])?.name }}
               </div>
-              <div v-if="getEntry(row[part.key])" class="entry-cell-move-actions">
+              <div v-if="state.isEditing && getEntry(row[part.key])" class="entry-cell-move-actions">
                 <el-button
                   :icon="Top"
                   text
@@ -741,13 +760,13 @@ watch(
                   @click.stop="moveEntry(rowIndex, part, 1)" />
               </div>
             </td>
-            <td class="action-column">
+            <td v-if="state.isEditing" class="action-column">
               <el-button :icon="Delete" text type="danger" aria-label="删除行" @click="removeRow(rowIndex)" />
             </td>
           </tr>
         </tbody>
       </table>
-      <div class="entry-table-actions">
+      <div v-if="state.isEditing" class="entry-table-actions">
         <el-button :icon="Plus" @click="addRow" style="width: 100%;"  plain dashed >加一行</el-button>
       </div>
     </section>
@@ -945,6 +964,10 @@ watch(
     }
 
     .entry-cell {
+      padding-right: 8px;
+    }
+
+    &.is-editing .entry-cell {
       padding-right: 56px;
     }
 
@@ -1035,6 +1058,10 @@ watch(
 
   .entry-cell {
     position: relative;
+    padding-right: 8px;
+  }
+
+  &.is-editing .entry-cell {
     padding-right: 58px;
   }
 

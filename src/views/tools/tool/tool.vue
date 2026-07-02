@@ -106,7 +106,7 @@ const toolList = [
         id: 41,
         type: "out",
         img: seasonMapImg,
-        url: "https://www.gaobug.com/blog-cloud-tool/kaipao/kaipao.html",
+        url:wrapUrl+ "/blog-cloud-tool/kaipao/kaipao.html",
       },
       {
         title: "装备词条表",
@@ -114,6 +114,13 @@ const toolList = [
         type: "inner",
         img: seasonMapImg,
         url: RouterEnum.XiangJiangshiKaipaoEquipment,
+      },
+        {
+        title: "赛季图转换",
+        id: 43,
+        type: "inner",
+        img: seasonMapImg,
+        url:wrapUrl+ "/blog-cloud-tool/kaipao/kaipao-convert.html",
       },
     ],
   },
