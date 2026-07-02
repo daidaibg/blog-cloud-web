@@ -118,7 +118,7 @@ const toolList = [
         {
         title: "赛季图转换",
         id: 43,
-        type: "inner",
+        type: "out",
         img: seasonMapImg,
         url:wrapUrl+ "/blog-cloud-tool/kaipao/kaipao-convert.html",
       },
