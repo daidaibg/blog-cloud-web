@@ -105,14 +105,14 @@ const toolList = [
         title: "赛季地图",
         id: 41,
         type: "out",
-        img: seasonMapImg,
+        img: wrapUrl+"/blog-cloud-tool/img/tools/kaipao-sjdt.png",
         url:wrapUrl+ "/blog-cloud-tool/kaipao/kaipao.html",
       },
       {
         title: "装备词条表",
         id: 42,
         type: "inner",
-        img: seasonMapImg,
+        img: wrapUrl+"/blog-cloud-tool/img/tools/kaipao-zbct.png",
         url: RouterEnum.XiangJiangshiKaipaoEquipment,
       },
         {

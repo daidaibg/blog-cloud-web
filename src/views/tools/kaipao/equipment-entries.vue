@@ -53,6 +53,7 @@ const route = useRoute();
 const tableRows = reactive<EntryRow[]>(createDefaultEquipmentEntryRows());
 const ignoredEntryIdsByPart = reactive<IgnoredEntryIdsByPart>(createEmptyIgnoredEntryIds());
 const openedCellKey = ref("");
+const activeMobilePartKey = ref<EquipmentPartKey>(equipmentParts[0].key);
 const state = reactive({
   isEditing: false,
   showFullName: true,
@@ -95,6 +96,10 @@ const selectedByPart = computed(() => {
     },
     {} as Record<EquipmentPartKey, string[]>,
   );
+});
+
+const activeMobilePart = computed(() => {
+  return equipmentParts.find((part) => part.key === activeMobilePartKey.value) || equipmentParts[0];
 });
 
 /**
@@ -640,6 +645,137 @@ watch(
     </section>
 
     <section class="entry-table-wrap">
+      <div class="mobile-entry-panel">
+        <div class="mobile-part-tabs" role="tablist" aria-label="装备部位">
+          <button
+            v-for="part in equipmentParts"
+            :key="part.key"
+            class="mobile-part-tab"
+            :class="{ 'is-active': activeMobilePartKey === part.key }"
+            type="button"
+            role="tab"
+            :aria-selected="activeMobilePartKey === part.key"
+            @click="activeMobilePartKey = part.key">
+            <img :src="partIconMap[part.key]" alt="" />
+            <span>{{ part.label }}</span>
+          </button>
+        </div>
+
+        <div class="mobile-entry-list">
+          <article v-for="(row, rowIndex) in tableRows" :key="rowIndex" class="mobile-entry-card">
+            <div class="mobile-entry-main">
+              <span class="mobile-entry-index">#{{ rowIndex + 1 }}</span>
+              <el-popover
+                v-if="state.isEditing"
+                :visible="openedCellKey === getCellKey(rowIndex, activeMobilePart.key)"
+                :width="340"
+                trigger="click"
+                placement="bottom"
+                :show-arrow="true"
+                popper-class="kaipao-entry-popover kaipao-entry-mobile-popover"
+                @update:visible="setCellVisible(rowIndex, activeMobilePart.key, $event)">
+                <template #reference>
+                  <el-button
+                    link
+                    class="entry-pick-button mobile-entry-pick"
+                    :aria-label="`${activeMobilePart.label}选择词条`"
+                    :title="getEntry(row[activeMobilePart.key])?.name || `选择${activeMobilePart.label}词条`">
+                    <el-icon><ArrowDown /></el-icon>
+                  </el-button>
+                </template>
+                <div class="entry-dropdown">
+                  <div class="entry-dropdown-head">
+                    <strong>{{ activeMobilePart.label }}词条</strong>
+                    <el-button
+                      link
+                      size="small"
+                      v-if="row[activeMobilePart.key]"
+                      :icon="Delete"
+                      @click="clearEntry(row, activeMobilePart)">
+                      清空
+                    </el-button>
+                  </div>
+                  <el-scrollbar max-height="480px" class="entry-dropdown-scroll">
+                    <div class="entry-option-list">
+                      <div
+                        v-for="entry in getOptions(activeMobilePart, row)"
+                        :key="entry.id"
+                        class="entry-option-button"
+                        :class="{ 'is-selected': isSelectedEntry(row, activeMobilePart, entry.id) }"
+                        @click="selectEntry(row, activeMobilePart, entry.id)">
+                        <span class="entry-option-text">
+                          <span class="entry-title">
+                            <img v-if="getEntrySeasonLogo(entry)" :src="getEntrySeasonLogo(entry)" alt="" />
+                            <strong>{{ getEntryDisplayName(entry) }}</strong>
+                          </span>
+                          <span v-if="state.showFullName">{{ entry.name }}</span>
+                        </span>
+                        <span class="entry-option-actions">
+                          <el-icon v-if="isSelectedEntry(row, activeMobilePart, entry.id)" class="entry-option-check">
+                            <Check />
+                          </el-icon>
+                          <el-button
+                            class="entry-ignore-button"
+                            :icon="Hide"
+                            link
+                            size="small"
+                            :title="`忽略${getEntryDisplayName(entry)}`"
+                            @click.stop="ignoreEntry(activeMobilePart, entry)">
+                            忽略
+                          </el-button>
+                        </span>
+                      </div>
+                    </div>
+                  </el-scrollbar>
+                </div>
+              </el-popover>
+
+              <div class="mobile-entry-title">
+                <template v-if="getEntry(row[activeMobilePart.key])">
+                  <img
+                    v-if="getEntrySeasonLogo(getEntry(row[activeMobilePart.key]))"
+                    :src="getEntrySeasonLogo(getEntry(row[activeMobilePart.key]))"
+                    alt="" />
+                  <span>{{ getEntryDisplayName(getEntry(row[activeMobilePart.key])) }}</span>
+                </template>
+                <span v-else class="mobile-entry-empty">未选择</span>
+              </div>
+
+              <div v-if="state.isEditing" class="mobile-entry-actions">
+                <el-button
+                  v-if="getEntry(row[activeMobilePart.key])"
+                  :icon="Top"
+                  text
+                  circle
+                  size="small"
+                  :disabled="rowIndex === 0"
+                  :aria-label="`${activeMobilePart.label}上移`"
+                  :title="`${activeMobilePart.label}上移`"
+                  @click.stop="moveEntry(rowIndex, activeMobilePart, -1)" />
+                <el-button
+                  v-if="getEntry(row[activeMobilePart.key])"
+                  :icon="Bottom"
+                  text
+                  circle
+                  size="small"
+                  :disabled="rowIndex === tableRows.length - 1"
+                  :aria-label="`${activeMobilePart.label}下移`"
+                  :title="`${activeMobilePart.label}下移`"
+                  @click.stop="moveEntry(rowIndex, activeMobilePart, 1)" />
+                <el-button :icon="Delete" text type="danger" aria-label="删除行" @click="removeRow(rowIndex)" />
+              </div>
+            </div>
+            <div v-if="state.showFullName && getEntry(row[activeMobilePart.key])" class="mobile-entry-desc">
+              <div
+                class="entry-full-name"
+                :title="getEntry(row[activeMobilePart.key])?.name">
+                {{ getEntry(row[activeMobilePart.key])?.name }}
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+
       <table class="entry-table" :class="{ 'is-compact': !state.showFullName, 'is-editing': state.isEditing }">
         <thead>
           <tr>
@@ -667,8 +803,8 @@ watch(
         </thead>
         <tbody>
           <tr v-for="(row, rowIndex) in tableRows" :key="rowIndex">
-            <td class="index-column">{{ rowIndex + 1 }}</td>
-            <td v-for="part in equipmentParts" :key="part.key" class="entry-cell">
+            <td class="index-column" data-label="序号">{{ rowIndex + 1 }}</td>
+            <td v-for="part in equipmentParts" :key="part.key" class="entry-cell" :data-label="part.label">
               <el-popover
                 v-if="state.isEditing"
                 :visible="openedCellKey === getCellKey(rowIndex, part.key)"
@@ -676,7 +812,7 @@ watch(
                 trigger="click"
                 placement="bottom"
                 :show-arrow="true"
-                popper-class="kaipao-entry-popover"
+                popper-class="kaipao-entry-popover kaipao-entry-desktop-popover"
                 @update:visible="setCellVisible(rowIndex, part.key, $event)">
                 <template #reference>
                   <el-button
@@ -760,7 +896,7 @@ watch(
                   @click.stop="moveEntry(rowIndex, part, 1)" />
               </div>
             </td>
-            <td v-if="state.isEditing" class="action-column">
+            <td v-if="state.isEditing" class="action-column" data-label="操作">
               <el-button :icon="Delete" text type="danger" aria-label="删除行" @click="removeRow(rowIndex)" />
             </td>
           </tr>
@@ -935,6 +1071,10 @@ watch(
   border-radius: 8px;
   background: var(--yh-bg-color-container, var(--el-bg-color));
   box-shadow: var(--yh-shadow-1, 0 8px 24px rgba(0, 0, 0, 0.06));
+}
+
+.mobile-entry-panel {
+  display: none;
 }
 
 .entry-table {
@@ -1164,10 +1304,13 @@ watch(
 
 .entry-dropdown {
   width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .entry-dropdown-head {
   display: flex;
+  min-width: 0;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -1176,8 +1319,12 @@ watch(
   border-bottom: 1px solid var(--yh-border-level-1-color, var(--el-border-color-lighter));
 
   strong {
+    min-width: 0;
+    overflow: hidden;
     color: var(--yh-text-color-primary, var(--el-text-color-primary));
     font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   button {
@@ -1193,16 +1340,22 @@ watch(
 .entry-dropdown-scroll {
   margin: 6px -4px -4px 0;
   padding-right: 4px;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .entry-option-list {
   display: flex;
+  min-width: 0;
+  max-width: 100%;
   flex-direction: column;
   gap: 4px;
 }
 
 .entry-option-button {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -1212,7 +1365,9 @@ watch(
   border-radius: 7px;
   color: var(--yh-text-color-primary, var(--el-text-color-primary));
   background: transparent;
+  box-sizing: border-box;
   cursor: pointer;
+  overflow: hidden;
   text-align: left;
   transition:
     border-color 0.16s ease,
@@ -1248,6 +1403,7 @@ watch(
   border-radius: 6px;
   color: var(--yh-text-color-secondary, var(--el-text-color-secondary));
   font-size: 12px;
+  white-space: nowrap;
 
   &:hover {
     color: var(--yh-warning-color, var(--el-color-warning));
@@ -1263,27 +1419,41 @@ watch(
   display: flex;
   flex: 1;
   min-width: 0;
+  max-width: 100%;
   flex-direction: column;
   gap: 4px;
   line-height: 1.42;
 
   strong {
+    min-width: 0;
+    overflow: hidden;
     color: var(--yh-text-color-primary, var(--el-text-color-primary));
     font-size: 13px;
     font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   span {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
     color: var(--yh-text-color-secondary, var(--el-text-color-secondary));
     font-size: 11px;
-    white-space: normal;
-    word-break: break-all;
+    word-break: break-word;
+  }
+
+  > span:not(.entry-title) {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
 }
 
 .entry-title {
   display: inline-flex;
   min-width: 0;
+  max-width: 100%;
   align-items: center;
   gap: 6px;
 
@@ -1302,18 +1472,34 @@ watch(
 }
 
 :global(.kaipao-entry-popover.el-popper) {
-  width: 340px;
-  max-width: min(340px, calc(100vw - 32px));
+  width: min(420px, calc(100vw - 24px)) !important;
+  max-width: min(420px, calc(100vw - 24px));
+  max-height: 60vh;
   border: 1px solid var(--yh-border-level-1-color, var(--el-border-color-light));
   border-radius: 8px;
   box-shadow: var(--yh-shadow-3, 0 16px 36px rgba(0, 0, 0, 0.18));
   background: var(--yh-bg-color-container, var(--el-bg-color-overlay));
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 :global(.kaipao-entry-popover.el-popper .el-popover__content) {
+  max-width: 100%;
+  max-height: 60vh;
+  overflow: hidden;
+  box-sizing: border-box;
   color: var(--yh-text-color-primary, var(--el-text-color-primary));
   background: var(--yh-bg-color-container, var(--el-bg-color-overlay));
+}
+
+:global(.kaipao-entry-popover.el-popper .el-scrollbar__wrap) {
+  max-height: min(60vh, 480px) !important;
+  overflow-x: hidden !important;
+}
+
+:global(.kaipao-entry-popover.el-popper .el-scrollbar__view) {
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 :global(.kaipao-entry-popover.el-popper .el-popper__arrow::before) {
@@ -1325,24 +1511,302 @@ watch(
   display: none;
 }
 
-@media (max-width: 760px) {
+:global(.kaipao-entry-mobile-popover.el-popper) {
+  display: none;
+}
+
+@media (max-width: 768px) {
   .kaipao-page {
-    padding: 14px;
+    overflow-x: hidden;
+    padding: 8px;
   }
 
   .kaipao-toolbar {
+    width: 100%;
     align-items: flex-start;
     flex-direction: column;
+    gap: 8px;
+    margin-bottom: 8px;
 
     h1 {
-      font-size: 20px;
+      font-size: 18px;
+      line-height: 1.35;
+      word-break: break-word;
+    }
+
+    p {
+      font-size: 12px;
+      line-height: 1.35;
+      word-break: break-word;
     }
   }
 
   .toolbar-actions {
     width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
     justify-content: flex-start;
   }
 
+  .detail-toggle,
+  .toolbar-3d-button {
+    width: 100%;
+    min-width: 0;
+    height: 34px;
+    justify-content: center;
+    padding: 0 8px;
+    border-radius: 8px;
+    transform: none;
+  }
+
+  .toolbar-3d-control {
+    transform: none;
+  }
+
+  .toolbar-3d-button:hover {
+    transform: none;
+  }
+
+  .entry-table-wrap {
+    width: 100%;
+    overflow: visible;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .mobile-entry-panel {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .mobile-part-tabs {
+    display: flex;
+    width: 100%;
+    max-width: 100%;
+    gap: 6px;
+    margin-bottom: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 1px 1px 5px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  .mobile-part-tab {
+    flex: 0 0 auto;
+    min-width: 66px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 0 9px;
+    border: 1px solid var(--yh-border-level-1-color, var(--el-border-color));
+    border-radius: 8px;
+    color: var(--yh-text-color-secondary, var(--el-text-color-secondary));
+    background: var(--yh-bg-color-container, var(--el-bg-color));
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+
+    img {
+      height: 20px;
+      width: 20px;
+      flex: 0 0 auto;
+      border-radius: 5px;
+      object-fit: cover;
+    }
+
+    &.is-active {
+      border-color: var(--yh-brand-color, var(--el-color-primary));
+      color: var(--yh-brand-color, var(--el-color-primary));
+      background: var(--yh-brand-color-1, var(--el-color-primary-light-9));
+      box-shadow: 0 3px 10px color-mix(in srgb, var(--yh-brand-color, var(--el-color-primary)) 18%, transparent);
+    }
+  }
+
+  .mobile-entry-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .mobile-entry-card {
+    width: 100%;
+    min-width: 0;
+    padding: 6px 8px;
+    border: 1px solid var(--yh-border-level-1-color, var(--el-border-color));
+    border-radius: 8px;
+    background: var(--yh-bg-color-container, var(--el-bg-color));
+    box-shadow: var(--yh-shadow-1, 0 3px 10px rgba(0, 0, 0, 0.05));
+    box-sizing: border-box;
+  }
+
+  .mobile-entry-main {
+    display: flex;
+    min-width: 0;
+    min-height: 32px;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .mobile-entry-index {
+    flex: 0 0 auto;
+    min-width: 28px;
+    padding: 2px 5px;
+    border-radius: 999px;
+    color: var(--yh-brand-color, var(--el-color-primary));
+    background: var(--yh-brand-color-1, var(--el-color-primary-light-9));
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 18px;
+  }
+
+  .mobile-entry-title {
+    display: inline-flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: center;
+    gap: 5px;
+    color: var(--yh-text-color-primary, var(--el-text-color-primary));
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.25;
+
+    img {
+      width: 24px;
+      height: 24px;
+      flex: 0 0 auto;
+      object-fit: contain;
+    }
+
+    span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .mobile-entry-pick {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    margin-bottom: 0;
+    border-radius: 8px;
+    background: var(--yh-bg-color-container-hover, var(--el-color-primary-light-9));
+  }
+
+  .mobile-entry-empty {
+    color: var(--yh-text-color-secondary, var(--el-text-color-secondary));
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .mobile-entry-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 2px;
+    margin-left: auto;
+    margin-top: 0;
+
+    :deep(.el-button) {
+      width: 30px;
+      height: 30px;
+      min-height: 30px;
+      margin-left: 0;
+      border-radius: 7px;
+    }
+  }
+
+  .mobile-entry-desc {
+    display: block;
+    min-width: 0;
+    margin-top: 3px;
+    padding-left: 34px;
+  }
+
+  .mobile-entry-desc:empty {
+    display: none;
+  }
+
+  .entry-table {
+    display: none !important;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .entry-full-name {
+    padding-right: 0;
+    margin-top: 0;
+    padding: 3px 0 0;
+    font-size: 11px;
+    line-height: 1.28;
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .entry-table-actions {
+    display: none !important;
+    margin-top: 8px;
+
+    :deep(.el-button) {
+      min-height: 34px;
+      height: 34px;
+    }
+  }
+
+  .entry-option-button {
+    gap: 8px;
+    padding: 7px 8px;
+  }
+
+  .entry-option-actions {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+  }
+
+  .entry-ignore-button {
+    min-height: 32px;
+    height: 32px;
+  }
+
+  :global(.kaipao-entry-mobile-popover.el-popper) {
+    display: block;
+  }
+
+  :global(.kaipao-entry-desktop-popover.el-popper) {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  :global(.kaipao-entry-popover.el-popper) {
+    width: calc(100vw - 24px) !important;
+    max-width: calc(100vw - 24px);
+    max-height: 55vh;
+  }
+
+  :global(.kaipao-entry-popover.el-popper .el-popover__content) {
+    max-height: 55vh;
+  }
+
+  :global(.kaipao-entry-popover.el-popper .el-scrollbar__wrap) {
+    max-height: min(55vh, 420px) !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .toolbar-actions {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
