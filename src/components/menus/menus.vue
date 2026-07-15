@@ -23,14 +23,16 @@ const props = defineProps({
       <template v-for="item in menus" :key="item.url">
         <el-sub-menu index="1" v-if="item.sub" :key="item.url">
           <template #title>
-            <i :class="item.icon" class="el-icon"></i>
+            <el-icon v-if="item.iconComponent" class="el-icon"><component :is="item.iconComponent" /></el-icon>
+            <i v-else :class="item.icon" class="el-icon"></i>
             <span>{{ item.name }}</span>
           </template>
           <el-menu-item :index="subItem.url" v-for="subItem in item.sub" :key="item.url">{{ subItem.name }}
           </el-menu-item>
         </el-sub-menu>
         <el-menu-item v-else :index="item.url">
-          <i :class="item.icon" class="el-icon"></i>
+          <el-icon v-if="item.iconComponent" class="el-icon"><component :is="item.iconComponent" /></el-icon>
+          <i v-else :class="item.icon" class="el-icon"></i>
           <template #title>{{ item.name }}</template>
         </el-menu-item>
       </template>

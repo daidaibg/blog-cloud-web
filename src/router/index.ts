@@ -1,5 +1,4 @@
 import { createRouter, createWebHashHistory, RouteRecordRaw, createWebHistory, RouterOptions } from "vue-router";
-import { getScrollContainer } from "yhht-plus/lib/utils/index";
 import { RouterEnum } from "@/enums";
 import { createLink } from "@/utils/dom";
 
@@ -242,10 +241,6 @@ router.beforeEach((to, from) => {
     container_nomountDom.style.display = "inline";
   }
   document.title = to.meta.title ? `${to.meta.title}  ${text}` : "搞bug";
-  if (to.path !== from.path) {
-    let body: any = getScrollContainer();
-    body.scrollTop = 0;
-  }
 });
 // --------------------------- 路由拦截 方法---------------------------------------------- //
 router.afterEach((to, from) => {
