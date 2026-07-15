@@ -40,12 +40,6 @@ onMounted(loadAccountData);
 
 <template>
   <div class="account-settings">
-    <GlassCard class="account-card account-card--heading" aria-labelledby="account-heading">
-      <p class="account-card__eyebrow">账户中心</p>
-      <h1 id="account-heading">账号设置</h1>
-      <p>查看并管理账号的安全信息与绑定方式</p>
-    </GlassCard>
-
     <GlassCard class="account-card account-card--security" :depth="1.2" aria-label="账号安全设置">
       <el-skeleton :loading="loading" animated>
         <template #template>
@@ -93,34 +87,6 @@ onMounted(loadAccountData);
 }
 
 .account-card {
-  &--heading {
-    padding: 28px 34px;
-
-    h1,
-    p {
-      margin: 0;
-    }
-
-    h1 {
-      margin-bottom: 8px;
-      color: var(--yh-text-color-primary);
-      font-size: 27px;
-      line-height: 1.2;
-    }
-
-    > p:last-child {
-      color: var(--yh-text-color-secondary);
-    }
-  }
-
-  &__eyebrow {
-    margin-bottom: 7px !important;
-    color: var(--yh-brand-color);
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.09em;
-  }
-
   &--security {
     padding: 10px 28px;
   }
@@ -214,10 +180,6 @@ onMounted(loadAccountData);
 
 @media (max-width: 680px) {
   .account-card {
-    &--heading {
-      padding: 22px 18px;
-    }
-
     &--security {
       padding: 6px 18px;
     }

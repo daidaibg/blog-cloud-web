@@ -5,6 +5,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } 
 
 import { uploadImg } from "@/api";
 import { updateUserAvatar } from "@/api/user";
+import GlassActionButton from "@/components/button/glass-action-button.vue";
 import { beforeAvatarUpload } from "@/utils/upload";
 
 const props = defineProps<{ modelValue: boolean }>();
@@ -261,9 +262,9 @@ onBeforeUnmount(() => {
     </div>
     <template #footer>
       <div class="avatar-crop-dialog__actions">
-        <el-button text class="avatar-crop-dialog__cancel" @click="closeDialog">取消</el-button>
-        <el-button v-if="previewUrl" class="avatar-crop-dialog__reselect" @click="openFilePicker">重新选择</el-button>
-        <el-button class="avatar-crop-dialog__save" :loading="uploading" :disabled="!previewUrl" @click="saveAvatar">保存头像</el-button>
+        <GlassActionButton @click="closeDialog">取消</GlassActionButton>
+        <GlassActionButton v-if="previewUrl" theme="info" @click="openFilePicker">重新选择</GlassActionButton>
+        <GlassActionButton theme="primary" :loading="uploading" :disabled="!previewUrl" @click="saveAvatar">保存头像</GlassActionButton>
       </div>
     </template>
   </el-dialog>

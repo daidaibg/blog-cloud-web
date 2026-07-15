@@ -6,6 +6,7 @@ import { computed, onMounted, reactive, ref } from "vue";
 import { getUserProfile, updateUserProfile, type UserProfile } from "@/api/user";
 import defaultAvatar from "@/assets/img/avatar.png";
 import GlassCard from "@/components/card/glass";
+import GlassActionButton from "@/components/button/glass-action-button.vue";
 import { useUserStore } from "@/store";
 import AvatarCropDialog from "./avatar-crop-dialog.vue";
 
@@ -38,9 +39,9 @@ async function copyLoginAccount() {
 
   try {
     await navigator.clipboard.writeText(loginAccount.value);
-    ElMessage.success("登录账号已复制");
+    ElMessage.success({ message: "登录账号已复制", plain: true });
   } catch {
-    ElMessage.error("复制失败，请稍后重试");
+    ElMessage.error({ message: "复制失败，请稍后重试", plain: true });
   }
 }
 
@@ -77,18 +78,18 @@ async function saveProfile() {
       nickName: formData.nickName,
       gender: formData.gender,
       birthday: formData.birthday,
-      summary: formData.summary,
-      avatar: formData.avatar
+      summary: formData.summary
     });
     if (result.code !== 200) {
-      ElMessage.error(result.msg || "保存失败");
+      ElMessage.error({ message: result.msg || "保存失败", plain: true });
       return;
     }
-    ElMessage.success("保存成功");
+    ElMessage.success({ message: "保存成功", plain: true });
+    userStore.getUserInfo();
     await loadProfile();
   } catch (error) {
     const message = (error as { msg?: string })?.msg || "保存失败，请稍后重试";
-    ElMessage.error(message);
+    ElMessage.error({ message, plain: true });
   } finally {
     saving.value = false;
   }
@@ -141,7 +142,7 @@ onMounted(loadProfile);
         </el-form-item>
 
         <div class="profile-form__actions profile-form__field--full">
-          <el-button class="profile-form__save-button" native-type="submit" type="primary" :loading="saving">保存修改</el-button>
+          <GlassActionButton theme="primary" native-type="submit" :loading="saving">保存修改</GlassActionButton>
         </div>
       </el-form>
     </GlassCard>
@@ -355,46 +356,6 @@ onMounted(loadProfile);
     justify-content: flex-end;
     min-height: 40px;
 
-    :deep(.profile-form__save-button.el-button) {
-      min-width: 102px;
-      min-height: 40px;
-      padding: 0 18px;
-      border: 1px solid color-mix(in srgb, #d8efff 82%, transparent);
-      border-radius: 15px;
-      background: linear-gradient(145deg, color-mix(in srgb, #70bbff 92%, var(--yh-brand-color)), var(--yh-brand-color));
-      color: #fff;
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: 0.02em;
-      text-shadow: 0 1px 1px color-mix(in srgb, #103d78 42%, transparent);
-      box-shadow:
-        inset 0 1px 1px color-mix(in srgb, #fff 58%, transparent),
-        inset 0 -2px 5px color-mix(in srgb, #0c4b9d 26%, transparent),
-        0 9px 18px color-mix(in srgb, var(--yh-brand-color) 26%, transparent);
-      transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
-
-      &:hover:not(.is-disabled) {
-        filter: brightness(1.05);
-        box-shadow:
-          inset 0 1px 1px color-mix(in srgb, #fff 66%, transparent),
-          inset 0 -2px 5px color-mix(in srgb, #0c4b9d 22%, transparent),
-          0 13px 23px color-mix(in srgb, var(--yh-brand-color) 34%, transparent);
-      }
-
-      &:active:not(.is-disabled) {
-        box-shadow:
-          inset 0 2px 6px color-mix(in srgb, #083d87 38%, transparent),
-          0 4px 9px color-mix(in srgb, var(--yh-brand-color) 24%, transparent);
-        transform: translateY(1px);
-      }
-
-      &.is-disabled {
-        border-color: color-mix(in srgb, #d7e5f3 82%, transparent);
-        background: color-mix(in srgb, #9db8d4 72%, transparent);
-        color: color-mix(in srgb, #fff 86%, transparent);
-        box-shadow: none;
-      }
-    }
   }
 }
 
