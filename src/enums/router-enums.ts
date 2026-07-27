@@ -6,7 +6,7 @@ export enum RouterEnum {
     //首页
     Home = "/",
     //博客首页
-    BlogHome = "/blog",
+    BlogHome = "/blogs",
     //工具
     Tool = "/tool",
     //json 格式化

@@ -12,6 +12,7 @@ const routes: Array<RouteRecordRaw> = [
       noSplice: true,
     },
   },
+
   {
     path: "/components",
     name: "components",
