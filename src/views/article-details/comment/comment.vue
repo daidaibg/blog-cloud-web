@@ -16,6 +16,7 @@ import {HotIcon} from "@/components/icons"
 import UtilVar from "@/config/UtilVar"
 
 const userStore = useUserStore();
+const commentReadOnly = true;
 // console.log(emojiList);
 const props = defineProps(Props);
 // const text=`我是假的，现在还不能评论[看]<p class="a" id='a'>我是p标签</p>`
@@ -35,6 +36,7 @@ const isEnd = computed(() => {
 
 //点击回复
 const onReply = (item: CommentListType) => {
+  if (commentReadOnly) return;
   if (item.id === replyId.value) {
     replyId.value = "";
     return;
@@ -64,6 +66,10 @@ const addCommentHandle = (CommentVal: string): CommentListType => {
  * @param {*} CommentVal
  */
 const onComment = (CommentVal: string, item?: CommentListType) => {
+  if (commentReadOnly) {
+    ElMessage.info({ message: "评论功能暂时关闭，当前仅支持查看。", plain: true });
+    return;
+  }
   if (!userStore.isLogin) {
     ElMessage.warning({message:"暂未登录，请登录后再进行评论！",plain:true});
     return;
@@ -90,6 +96,10 @@ const onComment = (CommentVal: string, item?: CommentListType) => {
 
 //删除评论
 const delComment = (item: CommentListType, i: number) => {
+  if (commentReadOnly) {
+    ElMessage.info({ message: "评论功能暂时关闭，当前仅支持查看。", plain: true });
+    return;
+  }
   ElMessageBox.confirm("确定要删除该评论吗?", {
     confirmButtonText: "确认",
     cancelButtonText: "取消",
@@ -159,10 +169,11 @@ getData();
 <template>
   <div id="comment" class="container-bg mt-16 rounded-6 comments">
     <div class="header-title">评论</div>
-    <div class="input_wrap flex">
+    <div v-if="!commentReadOnly" class="input_wrap flex">
       <el-avatar :size="40" :src="userStore.getUserData.avatar" class="avatar" />
       <comment-input @comment="onComment"></comment-input>
     </div>
+    <div v-else class="read-only-notice">评论功能暂时关闭，当前仅支持查看历史评论。</div>
     <div class="header-title flex items-center" >
       <div class="flex items-center" v-if=" commentList.length>0">
         热门评论
@@ -197,6 +208,7 @@ getData();
               <span>{{ item.likeCount }}</span>
             </div>
             <div
+              v-if="!commentReadOnly"
               class="info-box_action-item hovers"
               @click="onReply(item)"
               :class="{ replyIconActive: replyId == item.id }"
@@ -206,7 +218,7 @@ getData();
             </div>
             <div
               class="info-box_action-item ml-auto del"
-              v-if="item.userId == userStore.userData.id"
+              v-if="!commentReadOnly && item.userId == userStore.userData.id"
               @click="delComment(item, i)"
             >
               <span>删除</span>
@@ -214,7 +226,7 @@ getData();
           </div>
         </div>
         <!-- 回复框 -->
-        <div class="comment_main_reply" v-if="item.id == replyId">
+        <div class="comment_main_reply" v-if="!commentReadOnly && item.id == replyId">
           <comment-input
             @comment="(val:string)=>onComment(val,item)"
             @blur="onReplyIptBlur"
@@ -252,6 +264,13 @@ getData();
       margin-left: 4px;
       fill: var(--yh-error-color);
     }
+  }
+
+  .read-only-notice {
+    padding: 12px 16px;
+    border-radius: 4px;
+    background-color: var(--gb-container-hover);
+    color: var(--yh-text-color-secondary);
   }
 
   .input_wrap {

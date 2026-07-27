@@ -13,6 +13,7 @@ interface CommentListType {
 }
 
 const userStore = useUserStore();
+const commentReadOnly = true;
 
 const commentList = ref<CommentListType[]>([
   {
@@ -29,6 +30,7 @@ const commentList = ref<CommentListType[]>([
  * @param {*} CommentVal
  */
 const onComment = (CommentVal: string) => {
+  if (commentReadOnly) return;
   console.log(CommentVal);
   
   commentList.value.push({
@@ -42,13 +44,14 @@ const onComment = (CommentVal: string) => {
   <div id="comment" class="mt-16 comments gaobug">
     <div class="container-bg rounded-6 ">
       <div class="header-title">留言板</div>
-      <div class="input_wrap flex">
+      <div v-if="!commentReadOnly" class="input_wrap flex">
         <el-avatar :size="40" :src="userStore.getUserData.avatar" class="avatar" />
         <comment-input
           @comment="onComment"
           :autosize="{ minRows: 4, maxRows: 6 }"
         ></comment-input>
       </div>
+      <div v-else class="read-only-notice">留言功能暂时关闭，当前仅支持查看历史留言。</div>
       <div class="header-title flex items-center">
         <div class="flex items-center">
           热门留言
@@ -118,6 +121,13 @@ const onComment = (CommentVal: string) => {
       margin-left: 4px;
       fill: var(--yh-error-color);
     }
+  }
+
+  .read-only-notice {
+    padding: 12px 16px;
+    border-radius: 4px;
+    background-color: var(--gb-container-hover);
+    color: var(--yh-text-color-secondary);
   }
 
   .input_wrap {

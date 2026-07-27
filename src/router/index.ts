@@ -3,10 +3,15 @@ import { RouterEnum } from "@/enums";
 import { createLink } from "@/utils/dom";
 
 const routes: Array<RouteRecordRaw> = [
-  // {
-  //   path: '/',
-  //   // redirect: "components",
-  // },
+  {
+    path: RouterEnum.Home,
+    name: RouterEnum.Home,
+    component: () => import(/* webpackChunkName: "staticHome" */ "../views/static-home/static-home.vue"),
+    meta: {
+      title: "搞bug",
+      noSplice: true,
+    },
+  },
   {
     path: "/components",
     name: "components",
@@ -21,8 +26,8 @@ const routes: Array<RouteRecordRaw> = [
         },
       },
       {
-        path: "/",
-        name: "/",
+        path: RouterEnum.BlogHome,
+        name: RouterEnum.BlogHome,
         component: () => import(/* webpackChunkName: "Components" */ "../views/home/home.vue"),
         meta: {
           title: "搞bug",

@@ -161,7 +161,7 @@ useInfiniteScroll(
     distance: 200,
     interval: 100,
     canLoadMore: () => {
-      if (route.path === RouterEnum.Home) {
+      if (route.path === RouterEnum.BlogHome) {
         return !state.loading && !state.loadingEnd;
       }
       return false;
@@ -276,7 +276,7 @@ onActivated(() => {
       <home-user>
         <div class="beian">
           <img src="@/assets/img/beianicon.png" alt="备案徽章" />
-          <a href="https://beian.miit.gov.cn/" target="_blank">闽ICP备2022007995号-1</a>
+          <a href="https://beian.miit.gov.cn/" target="_blank">豫ICP备19040118号-3</a>
         </div>
       </home-user>
     </div>

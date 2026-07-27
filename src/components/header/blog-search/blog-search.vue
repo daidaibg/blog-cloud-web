@@ -18,7 +18,7 @@ interface Props {
   active: string;
 }
 const props = withDefaults(defineProps<Props>(), {
-  active: RouterEnum.Home,
+  active: RouterEnum.BlogHome,
 });
 
 //搜索类型
@@ -64,7 +64,7 @@ const search = (type?: SearchType) => {
     hideMiniSearch();
   }
   submitSearch(val);
-  if (props.active !== RouterEnum.Home) {
+  if (props.active !== RouterEnum.BlogHome) {
     router.replace({
       query: {
         s: val,

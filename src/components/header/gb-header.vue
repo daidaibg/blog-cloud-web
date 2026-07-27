@@ -106,7 +106,7 @@ const headerList = ref<HeaderListType[]>([
   {
     name: "header.home",
     translation: true,
-    path: RouterEnum.Home,
+    path: RouterEnum.BlogHome,
   },
   {
     name: "专题",
@@ -127,7 +127,7 @@ const active = computed(() => {
   let path: string = route.path;
   //如果是详情页的话渲染首页
   if (path.indexOf(RouterEnum.ArticleDetails) != -1) {
-    path = "/";
+    path = RouterEnum.BlogHome;
   }
   try {
     headerList.value.forEach((item: HeaderListType) => {

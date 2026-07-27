@@ -14,12 +14,26 @@ import { useHomeAnimations } from "./use-home-animations";
 import HeroGlitchImage from "./hero-glitch-image.vue";
 import IntroTextShatter from "./intro-text-shatter.vue";
 
+interface Props {
+  staticMode?: boolean;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  staticMode: false,
+});
+
 const pageRoot = ref<HTMLElement | null>(null);
 const heroRoot = ref<HTMLElement | null>(null);
 const userSummary = ref("");
 const userSummaryLoading = ref(true);
-const defaultName = "搞bug";
-const defaultUserSummary = `像阳光一样的人，像阳光一样的事，像阳光一样的爱，像阳光一样的慈悲，世界上遍地都是。
+const staticUserSummary = `白天用代码解决问题，晚上在日志里寻找答案。
+我喜欢把复杂需求拆成清晰逻辑，也享受让想法真正运行起来的过程。
+遇到 Bug 不慌，先定位、再调试；解决不了，就换个思路重新开始。
+人生也像一个长期维护的项目，允许报错，接受回滚，但始终保持学习、持续迭代，努力成为一个有技术、有想法，也有温度的开发者。`;
+const defaultName = props.staticMode ? "gaobug" : "搞bug";
+const defaultUserSummary = props.staticMode
+  ? staticUserSummary
+  : `像阳光一样的人，像阳光一样的事，像阳光一样的爱，像阳光一样的慈悲，世界上遍地都是。
 
 梦想似乎是遥远的，但是只要通过自己的努力，就能一步步拉近之间的距离。当距离越来越短时，它就不再是梦，而成为了触手可及的想法。无论如何，不要停下走向梦想的脚步。`;
 const { playTyping, setTypingName, typedSubtitle, typedWord } = useHomeAnimations(
@@ -76,6 +90,13 @@ const getBlog = async () => {
 
 // 获取个人资料：首页标题和介绍文案都以 /platform/user/profile 的数据为准。
 const getHomeUserInfo = async () => {
+  if (props.staticMode) {
+    userSummary.value = staticUserSummary;
+    userSummaryLoading.value = false;
+    playTyping();
+    return;
+  }
+
   try {
     const res = await getUserProfile();
     if (res.code === 200) {
@@ -94,7 +115,7 @@ const getHomeUserInfo = async () => {
   }
 };
 
-getBlog();
+if (!props.staticMode) getBlog();
 getHomeUserInfo();
 </script>
 
@@ -141,7 +162,7 @@ getHomeUserInfo();
             {{ typedSubtitle }}
           </h5>
           <div class="hero-enter welcome-action flex items-center mt-4 md:mt-8">
-            <button type="button" class="user-button primary">关注</button>
+            <button v-if="!props.staticMode" type="button" class="user-button primary">关注</button>
           </div>
         </div>
         <div class="hero-enter user-welcome-right w-5/12 px-4">
@@ -171,7 +192,7 @@ getHomeUserInfo();
 
     <!-- 别人的评价 -->
     <section class="others-comments max-w-screen-lg m-auto" data-reveal>
-      <h2 class="others-comments-title title_2">别人评价</h2>
+      <h2 class="others-comments-title title_2">{{ props.staticMode ? "个人评价" : "别人评价" }}</h2>
       <p class="others-comments-text">
         Is give may shall likeness made yielding spirit a itself togeth created after sea is in beast beginning signs
         open god you're gathering ithe
@@ -179,7 +200,7 @@ getHomeUserInfo();
     </section>
 
     <!-- 发表文章 / 项目卡片 hover 效果 -->
-    <section class="user-article max-w-screen-lg m-auto" data-reveal>
+    <section v-if="!props.staticMode" class="user-article max-w-screen-lg m-auto" data-reveal>
       <div class="section-heading">
         <span class="section-kicker">WRITING</span>
         <h2 class="user-article-title title_2">个人文章</h2>
@@ -224,6 +245,18 @@ getHomeUserInfo();
         </transition-group>
       </div>
     </section>
+
+    <footer v-if="props.staticMode" class="static-home-footer max-w-screen-lg m-auto">
+      <a
+        class="beian-link"
+        href="https://beian.miit.gov.cn/#/Integrated/index"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <img src="@/assets/img/beianicon.png" alt="备案徽章" />
+        <span>豫ICP备19040118号-3</span>
+      </a>
+    </footer>
   </main>
 </template>
 
@@ -244,6 +277,31 @@ $section-gap-desktop: 160px;
 }
 
 .home-toolbar { padding-inline: 16px; }
+
+.static-home-footer {
+  padding: 28px 16px 36px;
+  border-top: 1px solid var(--yh-border-level-1-color);
+  text-align: center;
+
+  .beian-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--yh-text-color-secondary);
+    font-size: 14px;
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: var(--yh-brand-color);
+    }
+
+    img {
+      width: 18px;
+      height: 18px;
+      object-fit: contain;
+    }
+  }
+}
 
 .user-welcome-box {
   position: relative;

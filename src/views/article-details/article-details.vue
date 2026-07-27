@@ -90,7 +90,7 @@ if (id) {
   getDetail();
   mdEditorConfig();
 } else {
-  router.push(RouterEnum.Home);
+  router.push(RouterEnum.BlogHome);
 }
 
 //编辑文章

@@ -5,6 +5,8 @@ export enum RouterEnum {
     MessageBoard = "/message/board",
     //首页
     Home = "/",
+    //博客首页
+    BlogHome = "/blog",
     //工具
     Tool = "/tool",
     //json 格式化
